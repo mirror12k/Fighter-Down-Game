@@ -64,6 +64,29 @@ UFOEnemy.prototype.draw = function(ctx) {
 };
 UFOEnemy.prototype.update = function(entities) {
 	this.rotation += 1;
+	this.rotation %= 360;
+	if (this.rotation == 180) {
+		this.fire(entities, 100, 200);
+	}
+};
+
+UFOEnemy.prototype.fire = function(entities, tx, ty) {
+	var dx = tx - this.px;
+	var dy = ty - this.py;
+	var angle = Math.atan2(dy, dx);
+	console.log("angle: ", angle / Math.PI * 180);
+
+	// entities.push(new EnemyBullet(tx, ty, 0,0));
+
+	var sx = Math.cos(angle) * 2;
+	var sy = Math.sin(angle) * 2;
+
+	for (var a = 0; a < 360; a += 30) {
+		var bx = Math.cos(a / 180 * Math.PI) * 40;
+		var by = Math.sin(a / 180 * Math.PI) * 40;
+
+		entities.push(new EnemyBullet(this.px + bx, this.py + by, sx,sy));
+	}
 };
 
 function EnemyBullet(px, py, sx, sy) {
