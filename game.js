@@ -53,6 +53,19 @@ function main () {
 	var canvas = document.querySelector('#game_canvas');
 	var ctx = canvas.getContext('2d');
 
+	load_all_images(function () {
+		console.log("all images loaded");
+
+		var entities = [];
+
+		entities.push(new EnemyBullet(8,8));
+
+		setInterval(step_game_frame.bind(undefined, ctx, entities), 1000 / 60);
+	});
+}
+
+function draw(ctx, entities)
+{
 	ctx.clearRect(0, 0, 640, 480);
 
 	ctx.fillStyle = 'rgb(200, 0, 0)';
@@ -61,22 +74,27 @@ function main () {
 	ctx.fillStyle = 'rgba(0, 0, 200, 0.5)';
 	ctx.fillRect(30, 30, 50, 50);
 
-	load_all_images(function () {
-		console.log("all images loaded");
-		ctx.drawImage(images.fighter, 0, 0, 64, 64);
-		// ctx.drawImage(images.mini_fighter, 20, 20, 256, 256);
-		ctx.drawImage(images.fighter_transform_animation, 0 + 64 * 0, 0, 64, 64, 20 + 64 * 0, 20, 64, 64);
-		ctx.drawImage(images.fighter_transform_animation, 0 + 64 * 1, 0, 64, 64, 20 + 64 * 1, 20, 64, 64);
-		ctx.drawImage(images.fighter_transform_animation, 0 + 64 * 2, 0, 64, 64, 20 + 64 * 2, 20, 64, 64);
-		ctx.drawImage(images.fighter_transform_animation, 0 + 64 * 3, 0, 64, 64, 20 + 64 * 3, 20, 64, 64);
-		ctx.drawImage(images.fighter_transform_animation, 0 + 64 * 4, 0, 64, 64, 20 + 64 * 4, 20, 64, 64);
-		ctx.drawImage(images.fighter_transform_animation, 0 + 64 * 5, 0, 64, 64, 20 + 64 * 5, 20, 64, 64);
-		ctx.drawImage(images.fighter_transform_animation, 0 + 64 * 6, 0, 64, 64, 20 + 64 * 6, 20, 64, 64);
-		ctx.drawImage(images.fighter_transform_animation, 0 + 64 * 7, 0, 64, 64, 20 + 64 * 7, 20, 64, 64);
+	ctx.drawImage(images.fighter, 0, 0, 64, 64);
+	// ctx.drawImage(images.mini_fighter, 20, 20, 256, 256);
+	ctx.drawImage(images.fighter_transform_animation, 0 + 64 * 0, 0, 64, 64, 20 + 64 * 0, 20, 64, 64);
+	ctx.drawImage(images.fighter_transform_animation, 0 + 64 * 1, 0, 64, 64, 20 + 64 * 1, 20, 64, 64);
+	ctx.drawImage(images.fighter_transform_animation, 0 + 64 * 2, 0, 64, 64, 20 + 64 * 2, 20, 64, 64);
+	ctx.drawImage(images.fighter_transform_animation, 0 + 64 * 3, 0, 64, 64, 20 + 64 * 3, 20, 64, 64);
+	ctx.drawImage(images.fighter_transform_animation, 0 + 64 * 4, 0, 64, 64, 20 + 64 * 4, 20, 64, 64);
+	ctx.drawImage(images.fighter_transform_animation, 0 + 64 * 5, 0, 64, 64, 20 + 64 * 5, 20, 64, 64);
+	ctx.drawImage(images.fighter_transform_animation, 0 + 64 * 6, 0, 64, 64, 20 + 64 * 6, 20, 64, 64);
+	ctx.drawImage(images.fighter_transform_animation, 0 + 64 * 7, 0, 64, 64, 20 + 64 * 7, 20, 64, 64);
 
-		var bullet = new EnemyBullet(8,8);
-		bullet.draw(ctx);
-	});
+	for (var i = 0; i < entities.length; i++) {
+		entities[i].draw(ctx);
+	}
+}
+
+function step_game_frame(ctx, entities)
+{
+	console.log('step');
+	entities[0].px += 1;
+	draw(ctx, entities);
 }
 
 
