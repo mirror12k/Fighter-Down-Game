@@ -102,8 +102,8 @@ UFOEnemy.prototype.draw = function(ctx) {
 UFOEnemy.prototype.update = function(game) {
 	this.rotation += 1;
 	this.rotation %= 360;
-	if (this.rotation == 180) {
-		this.fire(game, 100, 200);
+	if (this.rotation % 180 == 0) {
+		this.fire(game, 200, 100);
 	}
 };
 
@@ -123,7 +123,10 @@ UFOEnemy.prototype.fire = function(game, tx, ty) {
 		var path = [
 			{ timer: 30, px: this.px + bx, py: this.py + by, },
 			{ timer: 30, },
-			{ sx: sx, sy: sy, },
+			{ timer: 180, da: 1, fda: 0.99, angle: angle / Math.PI * 180, speed: 2 },
+			// { sx: sx, sy: sy, },
+			{ timer: 60, },
+			{ delete: true, },
 		];
 		game.entities_to_add.push(new EnemyBullet(game, this.px, this.py, path));
 	}
@@ -140,6 +143,10 @@ EnemyBullet.prototype.update = function(game) {
 	if (this.current_action === undefined) {
 		if (this.path.length > 0) {
 			this.current_action = this.path.shift();
+			if (this.current_action.delete !== undefined) {
+				game.entities_to_remove.push(this);
+			}
+
 			if (this.current_action.px !== undefined) {
 				this.current_action.sx = (this.current_action.px - this.px) / this.current_action.timer;
 				this.current_action.sy = (this.current_action.py - this.py) / this.current_action.timer;
@@ -151,8 +158,18 @@ EnemyBullet.prototype.update = function(game) {
 				this.current_action.sy = 0;
 		}
 	} else {
+		if (this.current_action.fda !== undefined) {
+			this.current_action.da *= this.current_action.fda;
+		}
+		if (this.current_action.da !== undefined) {
+			this.current_action.angle += this.current_action.da;
+			this.current_action.sx = Math.cos(this.current_action.angle / 180 * Math.PI) * this.current_action.speed;
+			this.current_action.sy = Math.sin(this.current_action.angle / 180 * Math.PI) * this.current_action.speed;
+		}
+
 		this.px += this.current_action.sx;
 		this.py += this.current_action.sy;
+
 		if (this.current_action.timer !== undefined) {
 			this.current_action.timer--;
 			if (this.current_action.timer <= 0)
