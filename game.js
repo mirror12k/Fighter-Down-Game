@@ -222,6 +222,7 @@ EnemyBullet.prototype.update = function(game) {
 function main () {
 	var canvas = document.querySelector('#game_canvas');
 	var ctx = canvas.getContext('2d');
+	ctx.imageSmoothingEnabled = false;
 
 	var images = {
 		fighter: "fighter.png",
