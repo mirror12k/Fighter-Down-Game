@@ -6,18 +6,7 @@ function load_image (url, callback) {
 	img.src = url;
 }
 
-var images = {
-	fighter: "fighter.png",
-	mini_fighter: "mini_fighter.png",
-	fighter_attack_formation: "fighter_attack_formation.png",
-	fighter_transform_animation: "fighter_transform_animation.png",
-	enemy_bullet_orange: "enemy_bullet_orange.png",
-	enemy_bullet_overlay_effect: "enemy_bullet_overlay_effect.png",
-	ufo: "ufo.png",
-	ufo_small: "ufo_small.png",
-};
-
-function load_all_images (callback) {
+function load_all_images (images, callback) {
 	var keys = Object.keys(images);
 	var count_loaded = 0;
 	for (var i = 0; i < keys.length; i++) {
@@ -31,12 +20,60 @@ function load_all_images (callback) {
 	}
 }
 
+function GameSystem(images) {
+	this.images = images;
 
-function Entity() {}
+	this.entities = [];
+	this.entities_to_add = [];
+	this.entities_to_remove = [];
+}
+GameSystem.prototype.update = function () {
+	for (var i = 0; i < this.entities.length; i++) {
+		this.entities[i].update(this);
+	}
+
+	for (var i = 0; i < this.entities_to_remove.length; i++) {
+		var index = this.entities.indexOf(this.entities_to_remove[i]);
+		if (index >= 0)
+			this.entities.splice(index, 1);
+	}
+	this.entities_to_remove = [];
+
+	for (var i = 0; i < this.entities_to_add.length; i++)
+		this.entities.push(this.entities_to_add[i]);
+	this.entities_to_add = [];
+};
+GameSystem.prototype.draw = function (ctx) {
+	ctx.clearRect(0, 0, 640, 480);
+
+	ctx.fillStyle = 'rgb(200, 0, 0)';
+	ctx.fillRect(10, 10, 50, 50);
+
+	ctx.fillStyle = 'rgba(0, 0, 200, 0.5)';
+	ctx.fillRect(30, 30, 50, 50);
+
+	ctx.drawImage(this.images.fighter, 0, 0, 64, 64);
+	// ctx.drawImage(this.images.mini_fighter, 20, 20, 256, 256);
+	ctx.drawImage(this.images.fighter_transform_animation, 0 + 64 * 0, 0, 64, 64, 20 + 64 * 0, 20, 64, 64);
+	ctx.drawImage(this.images.fighter_transform_animation, 0 + 64 * 1, 0, 64, 64, 20 + 64 * 1, 20, 64, 64);
+	ctx.drawImage(this.images.fighter_transform_animation, 0 + 64 * 2, 0, 64, 64, 20 + 64 * 2, 20, 64, 64);
+	ctx.drawImage(this.images.fighter_transform_animation, 0 + 64 * 3, 0, 64, 64, 20 + 64 * 3, 20, 64, 64);
+	ctx.drawImage(this.images.fighter_transform_animation, 0 + 64 * 4, 0, 64, 64, 20 + 64 * 4, 20, 64, 64);
+	ctx.drawImage(this.images.fighter_transform_animation, 0 + 64 * 5, 0, 64, 64, 20 + 64 * 5, 20, 64, 64);
+	ctx.drawImage(this.images.fighter_transform_animation, 0 + 64 * 6, 0, 64, 64, 20 + 64 * 6, 20, 64, 64);
+	ctx.drawImage(this.images.fighter_transform_animation, 0 + 64 * 7, 0, 64, 64, 20 + 64 * 7, 20, 64, 64);
+
+	for (var i = 0; i < this.entities.length; i++) {
+		this.entities[i].draw(ctx);
+	}
+};
+
+
+function Entity(game) {}
 Entity.prototype.update = function(entities) {};
 Entity.prototype.draw = function(ctx) {};
 
-function ScreenEntity(px, py, width, height, img) {
+function ScreenEntity(game, px, py, width, height, img) {
 	this.px = px;
 	this.py = py;
 	this.width = width;
@@ -48,8 +85,8 @@ ScreenEntity.prototype.draw = function(ctx) {
 	ctx.drawImage(this.img, this.px - this.width / 2, this.py - this.height / 2, this.width, this.height);
 };
 
-function UFOEnemy(px, py) {
-	ScreenEntity.call(this, px, py, 64, 64, images.ufo);
+function UFOEnemy(game, px, py) {
+	ScreenEntity.call(this, game, px, py, 64, 64, game.images.ufo);
 	this.rotation = 0;
 }
 UFOEnemy.prototype = Object.create(ScreenEntity.prototype);
@@ -62,21 +99,19 @@ UFOEnemy.prototype.draw = function(ctx) {
 
 	ctx.restore();
 };
-UFOEnemy.prototype.update = function(entities) {
+UFOEnemy.prototype.update = function(game) {
 	this.rotation += 1;
 	this.rotation %= 360;
 	if (this.rotation == 180) {
-		this.fire(entities, 100, 200);
+		this.fire(game, 100, 200);
 	}
 };
 
-UFOEnemy.prototype.fire = function(entities, tx, ty) {
+UFOEnemy.prototype.fire = function(game, tx, ty) {
 	var dx = tx - this.px;
 	var dy = ty - this.py;
 	var angle = Math.atan2(dy, dx);
 	console.log("angle: ", angle / Math.PI * 180);
-
-	// entities.push(new EnemyBullet(tx, ty, 0,0));
 
 	var sx = Math.cos(angle) * 2;
 	var sy = Math.sin(angle) * 2;
@@ -90,18 +125,18 @@ UFOEnemy.prototype.fire = function(entities, tx, ty) {
 			{ timer: 30, },
 			{ sx: sx, sy: sy, },
 		];
-		entities.push(new EnemyBullet(this.px, this.py, path));
+		game.entities_to_add.push(new EnemyBullet(game, this.px, this.py, path));
 	}
 };
 
-function EnemyBullet(px, py, path) {
-	ScreenEntity.call(this, px, py, 16, 16, images.enemy_bullet_orange);
+function EnemyBullet(game, px, py, path) {
+	ScreenEntity.call(this, game, px, py, 16, 16, game.images.enemy_bullet_orange);
 
 	this.path = path;
 	this.current_action = undefined;
 }
 EnemyBullet.prototype = Object.create(ScreenEntity.prototype);
-EnemyBullet.prototype.update = function(entities) {
+EnemyBullet.prototype.update = function(game) {
 	if (this.current_action === undefined) {
 		if (this.path.length > 0) {
 			this.current_action = this.path.shift();
@@ -130,58 +165,34 @@ function main () {
 	var canvas = document.querySelector('#game_canvas');
 	var ctx = canvas.getContext('2d');
 
-	load_all_images(function () {
+	var images = {
+		fighter: "fighter.png",
+		mini_fighter: "mini_fighter.png",
+		fighter_attack_formation: "fighter_attack_formation.png",
+		fighter_transform_animation: "fighter_transform_animation.png",
+		enemy_bullet_orange: "enemy_bullet_orange.png",
+		enemy_bullet_overlay_effect: "enemy_bullet_overlay_effect.png",
+		ufo: "ufo.png",
+		ufo_small: "ufo_small.png",
+	};
+
+	load_all_images(images, function () {
 		console.log("all images loaded");
 
-		var entities = [];
+		var game = new GameSystem(images);
 
-		entities.push(new EnemyBullet(8,8, 1,1));
-		entities.push(new UFOEnemy(100,100));
+		game.entities.push(new EnemyBullet(game, 8,8, 1,1));
+		game.entities.push(new UFOEnemy(game, 100,100));
 
-		setInterval(step_game_frame.bind(undefined, ctx, entities), 1000 / 60);
+		setInterval(step_game_frame.bind(undefined, ctx, game), 1000 / 60);
 	});
 }
 
-function draw_entities(ctx, entities)
-{
-	ctx.clearRect(0, 0, 640, 480);
-
-	ctx.fillStyle = 'rgb(200, 0, 0)';
-	ctx.fillRect(10, 10, 50, 50);
-
-	ctx.fillStyle = 'rgba(0, 0, 200, 0.5)';
-	ctx.fillRect(30, 30, 50, 50);
-
-	ctx.drawImage(images.fighter, 0, 0, 64, 64);
-	// ctx.drawImage(images.mini_fighter, 20, 20, 256, 256);
-	ctx.drawImage(images.fighter_transform_animation, 0 + 64 * 0, 0, 64, 64, 20 + 64 * 0, 20, 64, 64);
-	ctx.drawImage(images.fighter_transform_animation, 0 + 64 * 1, 0, 64, 64, 20 + 64 * 1, 20, 64, 64);
-	ctx.drawImage(images.fighter_transform_animation, 0 + 64 * 2, 0, 64, 64, 20 + 64 * 2, 20, 64, 64);
-	ctx.drawImage(images.fighter_transform_animation, 0 + 64 * 3, 0, 64, 64, 20 + 64 * 3, 20, 64, 64);
-	ctx.drawImage(images.fighter_transform_animation, 0 + 64 * 4, 0, 64, 64, 20 + 64 * 4, 20, 64, 64);
-	ctx.drawImage(images.fighter_transform_animation, 0 + 64 * 5, 0, 64, 64, 20 + 64 * 5, 20, 64, 64);
-	ctx.drawImage(images.fighter_transform_animation, 0 + 64 * 6, 0, 64, 64, 20 + 64 * 6, 20, 64, 64);
-	ctx.drawImage(images.fighter_transform_animation, 0 + 64 * 7, 0, 64, 64, 20 + 64 * 7, 20, 64, 64);
-
-	for (var i = 0; i < entities.length; i++) {
-		entities[i].draw(ctx);
-	}
-}
-
-function update_entities(entities)
-{
-	for (var i = 0; i < entities.length; i++) {
-		entities[i].update(entities);
-	}
-}
-
-function step_game_frame(ctx, entities)
+function step_game_frame(ctx, game)
 {
 	// console.log('step');
-
-	update_entities(entities);
-
-	draw_entities(ctx, entities);
+	game.update();
+	game.draw(ctx);
 }
 
 
