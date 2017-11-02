@@ -32,6 +32,10 @@ function load_all_images (callback) {
 }
 
 
+function Entity() {}
+Entity.prototype.update = function(entities) {};
+Entity.prototype.draw = function(ctx) {};
+
 function ScreenEntity(px, py, width, height, img) {
 	this.px = px;
 	this.py = py;
@@ -39,15 +43,22 @@ function ScreenEntity(px, py, width, height, img) {
 	this.height = height;
 	this.img = img;
 }
-
+ScreenEntity.prototype = Object.create(Entity.prototype);
 ScreenEntity.prototype.draw = function(ctx) {
 	ctx.drawImage(this.img, this.px - this.width / 2, this.py - this.height / 2, this.width, this.height);
 };
 
-function EnemyBullet(px, py) {
+function EnemyBullet(px, py, sx, sy) {
 	ScreenEntity.call(this, px, py, 16, 16, images.enemy_bullet_orange);
+	this.sx = sx;
+	this.sy = sy;
 }
 EnemyBullet.prototype = Object.create(ScreenEntity.prototype);
+EnemyBullet.prototype.update = function(entities) {
+	this.px += this.sx;
+	this.py += this.sy;
+	console.log('debug:', this.px, this.py);
+};
 
 function main () {
 	var canvas = document.querySelector('#game_canvas');
@@ -58,13 +69,13 @@ function main () {
 
 		var entities = [];
 
-		entities.push(new EnemyBullet(8,8));
+		entities.push(new EnemyBullet(8,8, 1,1));
 
 		setInterval(step_game_frame.bind(undefined, ctx, entities), 1000 / 60);
 	});
 }
 
-function draw(ctx, entities)
+function draw_entities(ctx, entities)
 {
 	ctx.clearRect(0, 0, 640, 480);
 
@@ -90,11 +101,20 @@ function draw(ctx, entities)
 	}
 }
 
+function update_entities(entities)
+{
+	for (var i = 0; i < entities.length; i++) {
+		entities[i].update(entities);
+	}
+}
+
 function step_game_frame(ctx, entities)
 {
 	console.log('step');
-	entities[0].px += 1;
-	draw(ctx, entities);
+
+	update_entities(entities);
+
+	draw_entities(ctx, entities);
 }
 
 
