@@ -87,22 +87,22 @@ ScreenEntity.prototype.draw = function(ctx) {
 
 function UFOEnemy(game, px, py) {
 	ScreenEntity.call(this, game, px, py, 64, 64, game.images.ufo);
-	this.rotation = 0;
+	this.angle = 0;
 }
 UFOEnemy.prototype = Object.create(ScreenEntity.prototype);
 UFOEnemy.prototype.draw = function(ctx) {
 	ctx.save();
 
 	ctx.translate(this.px, this.py);
-	ctx.rotate(Math.PI * (Math.floor(this.rotation / 15) * 15) / 180);
+	ctx.rotate(Math.PI * (Math.floor(this.angle / 15) * 15) / 180);
 	ctx.drawImage(this.img, 0 - this.width / 2, 0 - this.height / 2, this.width, this.height);
 
 	ctx.restore();
 };
 UFOEnemy.prototype.update = function(game) {
-	this.rotation += 1;
-	this.rotation %= 360;
-	if (this.rotation % 180 == 0) {
+	this.angle += 1;
+	this.angle %= 360;
+	if (this.angle % 180 == 0) {
 		this.fire(game, 200, 100);
 	}
 };
@@ -130,6 +130,47 @@ UFOEnemy.prototype.fire = function(game, tx, ty) {
 		];
 		game.entities_to_add.push(new EnemyBullet(game, this.px, this.py, path));
 	}
+};
+
+function RotatingCrystalEntity(game, px, py) {
+	ScreenEntity.call(this, game, px, py, 16, 16, game.images.purple_crystal);
+	this.angle = 0;
+}
+RotatingCrystalEntity.prototype = Object.create(ScreenEntity.prototype);
+RotatingCrystalEntity.prototype.update = function(game) {
+	this.angle += 1;
+	this.angle %= 360;
+};
+RotatingCrystalEntity.prototype.draw = function(ctx) {
+	ctx.save();
+
+	ctx.translate(this.px, this.py);
+	ctx.rotate(Math.PI * (Math.floor(this.angle / 15) * 15) / 180);
+	ctx.drawImage(this.img, 0 - this.width / 2, 0 - this.height / 2, this.width, this.height);
+
+	ctx.restore();
+};
+
+function UFOCorsairEnemy(game, px, py) {
+	ScreenEntity.call(this, game, px, py, 128, 64, game.images.ufo_corsair);
+	this.crystal_ent = new RotatingCrystalEntity(game, 32, 0);
+	this.angle = 0;
+}
+UFOCorsairEnemy.prototype = Object.create(ScreenEntity.prototype);
+UFOCorsairEnemy.prototype.update = function(game) {
+	this.crystal_ent.update(game);
+	this.angle += 0.2;
+};
+UFOCorsairEnemy.prototype.draw = function(ctx) {
+	ctx.save();
+
+	ctx.translate(this.px, this.py);
+	ctx.rotate(Math.PI * (Math.floor(this.angle / 15) * 15) / 180);
+	ctx.drawImage(this.img, 0 - this.width / 2, 0 - this.height / 2, this.width, this.height);
+
+	this.crystal_ent.draw(ctx);
+
+	ctx.restore();
 };
 
 function EnemyBullet(game, px, py, path) {
@@ -187,10 +228,13 @@ function main () {
 		mini_fighter: "mini_fighter.png",
 		fighter_attack_formation: "fighter_attack_formation.png",
 		fighter_transform_animation: "fighter_transform_animation.png",
-		enemy_bullet_orange: "enemy_bullet_orange.png",
-		enemy_bullet_overlay_effect: "enemy_bullet_overlay_effect.png",
 		ufo: "ufo.png",
 		ufo_small: "ufo_small.png",
+		ufo_corsair: "ufo_corsair.png",
+
+		enemy_bullet_orange: "enemy_bullet_orange.png",
+		enemy_bullet_overlay_effect: "enemy_bullet_overlay_effect.png",
+		purple_crystal: "purple_crystal.png",
 	};
 
 	load_all_images(images, function () {
@@ -200,6 +244,7 @@ function main () {
 
 		game.entities.push(new EnemyBullet(game, 8,8, 1,1));
 		game.entities.push(new UFOEnemy(game, 100,100));
+		game.entities.push(new UFOCorsairEnemy(game, 300,100));
 
 		setInterval(step_game_frame.bind(undefined, ctx, game), 1000 / 60);
 	});
