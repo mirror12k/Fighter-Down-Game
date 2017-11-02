@@ -85,19 +85,45 @@ UFOEnemy.prototype.fire = function(entities, tx, ty) {
 		var bx = Math.cos(a / 180 * Math.PI) * 40;
 		var by = Math.sin(a / 180 * Math.PI) * 40;
 
-		entities.push(new EnemyBullet(this.px + bx, this.py + by, sx,sy));
+		var path = [
+			{ timer: 30, px: this.px + bx, py: this.py + by, },
+			{ timer: 30, },
+			{ sx: sx, sy: sy, },
+		];
+		entities.push(new EnemyBullet(this.px, this.py, path));
 	}
 };
 
-function EnemyBullet(px, py, sx, sy) {
+function EnemyBullet(px, py, path) {
 	ScreenEntity.call(this, px, py, 16, 16, images.enemy_bullet_orange);
-	this.sx = sx;
-	this.sy = sy;
+
+	this.path = path;
+	this.current_action = undefined;
 }
 EnemyBullet.prototype = Object.create(ScreenEntity.prototype);
 EnemyBullet.prototype.update = function(entities) {
-	this.px += this.sx;
-	this.py += this.sy;
+	if (this.current_action === undefined) {
+		if (this.path.length > 0) {
+			this.current_action = this.path.shift();
+			if (this.current_action.px !== undefined) {
+				this.current_action.sx = (this.current_action.px - this.px) / this.current_action.timer;
+				this.current_action.sy = (this.current_action.py - this.py) / this.current_action.timer;
+			}
+
+			if (this.current_action.sx == undefined)
+				this.current_action.sx = 0;
+			if (this.current_action.sy == undefined)
+				this.current_action.sy = 0;
+		}
+	} else {
+		this.px += this.current_action.sx;
+		this.py += this.current_action.sy;
+		if (this.current_action.timer !== undefined) {
+			this.current_action.timer--;
+			if (this.current_action.timer <= 0)
+				this.current_action = undefined;
+		}
+	}
 };
 
 function main () {
