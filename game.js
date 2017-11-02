@@ -197,6 +197,11 @@ EnemyBullet.prototype.update = function(game) {
 				this.current_action.sx = 0;
 			if (this.current_action.sy == undefined)
 				this.current_action.sy = 0;
+
+			if (this.current_action.angle !== undefined) {
+				this.current_action.sx = Math.cos(this.current_action.angle / 180 * Math.PI) * this.current_action.speed;
+				this.current_action.sy = Math.sin(this.current_action.angle / 180 * Math.PI) * this.current_action.speed;
+			}
 		}
 	} else {
 		if (this.current_action.fda !== undefined) {
@@ -219,6 +224,36 @@ EnemyBullet.prototype.update = function(game) {
 	}
 };
 
+function ParticleEffect(game, px, py, sx, sy, fill_style) {
+	ScreenEntity.call(this, game, px, py, 8, 8, game.images.particle_effect_generic);
+	this.sx = sx;
+	this.sy = sy;
+	
+	this.frame = 0;
+	this.fill_style = fill_style;
+}
+ParticleEffect.prototype = Object.create(ScreenEntity.prototype);
+ParticleEffect.prototype.draw = function(ctx) {
+	// ctx.save();
+
+	var buffer_canvas = document.createElement('canvas');
+	buffer_canvas.width = this.width;
+	buffer_canvas.height = this.height;
+	var buffer_context = buffer_canvas.getContext('2d');
+
+	buffer_context.fillStyle = this.fill_style;
+	buffer_context.fillRect(0,0, buffer_canvas.width, buffer_canvas.height);
+
+	buffer_context.globalCompositeOperation = "destination-atop";
+	buffer_context.drawImage(this.img, 8*this.frame,0, 8,8,  0,0, 8,8);
+
+	// ctx.translate(this.px, this.py);
+	// ctx.rotate(Math.PI * (Math.floor(this.angle / 15) * 15) / 180);
+	ctx.drawImage(buffer_canvas, this.px - this.width, this.py - this.height, this.width * 2, this.height * 2);
+
+	// ctx.restore();
+};
+
 function main () {
 	var canvas = document.querySelector('#game_canvas');
 	var ctx = canvas.getContext('2d');
@@ -236,6 +271,7 @@ function main () {
 		enemy_bullet_orange: "enemy_bullet_orange.png",
 		enemy_bullet_overlay_effect: "enemy_bullet_overlay_effect.png",
 		purple_crystal: "purple_crystal.png",
+		particle_effect_generic: "particle_effect_generic.png",
 	};
 
 	load_all_images(images, function () {
@@ -246,6 +282,7 @@ function main () {
 		game.entities.push(new EnemyBullet(game, 8,8, 1,1));
 		game.entities.push(new UFOEnemy(game, 100,100));
 		game.entities.push(new UFOCorsairEnemy(game, 300,100));
+		game.entities.push(new ParticleEffect(game, 300,200));
 
 		setInterval(step_game_frame.bind(undefined, ctx, game), 1000 / 60);
 	});
