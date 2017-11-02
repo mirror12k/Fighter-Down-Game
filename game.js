@@ -48,6 +48,24 @@ ScreenEntity.prototype.draw = function(ctx) {
 	ctx.drawImage(this.img, this.px - this.width / 2, this.py - this.height / 2, this.width, this.height);
 };
 
+function UFOEnemy(px, py) {
+	ScreenEntity.call(this, px, py, 64, 64, images.ufo);
+	this.rotation = 0;
+}
+UFOEnemy.prototype = Object.create(ScreenEntity.prototype);
+UFOEnemy.prototype.draw = function(ctx) {
+	ctx.save();
+
+	ctx.translate(this.px, this.py);
+	ctx.rotate(Math.PI * (Math.floor(this.rotation / 15) * 15) / 180);
+	ctx.drawImage(this.img, 0 - this.width / 2, 0 - this.height / 2, this.width, this.height);
+
+	ctx.restore();
+};
+UFOEnemy.prototype.update = function(entities) {
+	this.rotation += 1;
+};
+
 function EnemyBullet(px, py, sx, sy) {
 	ScreenEntity.call(this, px, py, 16, 16, images.enemy_bullet_orange);
 	this.sx = sx;
@@ -57,7 +75,6 @@ EnemyBullet.prototype = Object.create(ScreenEntity.prototype);
 EnemyBullet.prototype.update = function(entities) {
 	this.px += this.sx;
 	this.py += this.sy;
-	console.log('debug:', this.px, this.py);
 };
 
 function main () {
@@ -70,6 +87,7 @@ function main () {
 		var entities = [];
 
 		entities.push(new EnemyBullet(8,8, 1,1));
+		entities.push(new UFOEnemy(100,100));
 
 		setInterval(step_game_frame.bind(undefined, ctx, entities), 1000 / 60);
 	});
@@ -110,7 +128,7 @@ function update_entities(entities)
 
 function step_game_frame(ctx, entities)
 {
-	console.log('step');
+	// console.log('step');
 
 	update_entities(entities);
 
