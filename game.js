@@ -28,6 +28,7 @@ function GameSystem(images) {
 	this.entities_to_remove = [];
 }
 GameSystem.prototype.update = function () {
+	this.particle_system.add_particle(300,300, 4);
 	for (var i = 0; i < this.entities.length; i++) {
 		this.entities[i].update(this);
 	}
@@ -254,6 +255,87 @@ ParticleEffect.prototype.draw = function(ctx) {
 	// ctx.restore();
 };
 
+function ParticleEffectSystem(game, fill_style) {
+	this.fill_style = fill_style;
+	this.particles = [];
+
+	this.particle_image = game.images.particle_effect_generic;
+	this.width = 32;
+	this.height = 8;
+
+	this.frame_width = 8;
+
+	this.max_frame = this.width / this.frame_width;
+
+	this.particle_width = 16;
+	this.particle_height = 16;
+
+	this.prepare_buffer();
+}
+ParticleEffectSystem.prototype = Object.create(ScreenEntity.prototype);
+ParticleEffectSystem.prototype.prepare_buffer = function() {
+	this.buffer_canvas = document.createElement('canvas');
+	this.buffer_canvas.width = this.width;
+	this.buffer_canvas.height = this.height;
+	var buffer_context = this.buffer_canvas.getContext('2d');
+
+	buffer_context.fillStyle = this.fill_style;
+	buffer_context.fillRect(0,0, this.buffer_canvas.width, this.buffer_canvas.height);
+
+	buffer_context.globalCompositeOperation = "destination-atop";
+	buffer_context.drawImage(this.particle_image, 0,0);
+};
+ParticleEffectSystem.prototype.add_particle = function(px, py, speed) {
+	var sx = ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
+	var sy = ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
+
+	this.particles.push({
+		px: px,
+		py: py,
+		sx: sx,
+		sy: sy,
+		sr: Math.random() - 0.5,
+		angle: Math.random() * 360,
+		frame: 0,
+	});
+};
+ParticleEffectSystem.prototype.update = function(game) {
+	for (var i = this.particles.length - 1; i >= 0; i--) {
+		this.particles[i].px += this.particles[i].sx;
+		this.particles[i].py += this.particles[i].sy;
+		this.particles[i].angle += this.particles[i].sr;
+
+		if (Math.random() > 0.95) {
+			this.particles[i].frame++;
+			if (this.particles[i].frame >= this.max_frame) {
+				this.particles.splice(i, 1);
+			}
+		}
+	}
+};
+ParticleEffectSystem.prototype.draw = function(ctx) {
+
+	// console.log("drawing ", this.particles.length, "particles");
+	for (var i = 0; i < this.particles.length; i++) {
+		var p = this.particles[i];
+		ctx.save();
+
+		ctx.translate(p.px, p.py);
+		ctx.rotate(Math.PI * (Math.floor(p.angle / 15) * 15) / 180);
+		// var width = this.particle_width;
+		// var height = this.particle_height;
+		var width = this.particle_width * ((6 - p.frame) / 4);
+		var height = this.particle_height * ((6 - p.frame) / 4);
+		ctx.drawImage(this.buffer_canvas, 
+			this.frame_width * p.frame, 0, this.frame_width, this.height,
+			0 - width / 2, 0 - height / 2, width, height);
+
+		ctx.restore();
+	}
+};
+
+
+
 function main () {
 	var canvas = document.querySelector('#game_canvas');
 	var ctx = canvas.getContext('2d');
@@ -282,7 +364,13 @@ function main () {
 		game.entities.push(new EnemyBullet(game, 8,8, 1,1));
 		game.entities.push(new UFOEnemy(game, 100,100));
 		game.entities.push(new UFOCorsairEnemy(game, 300,100));
-		game.entities.push(new ParticleEffect(game, 300,200));
+		game.particle_system = new ParticleEffectSystem(game, '#404');
+		game.entities.push(game.particle_system);
+
+		// game.particle_system.add_particle(300,300, 0,0);
+		game.particle_system.add_particle(200,200, 4);
+		game.particle_system.add_particle(200,200, 4);
+		game.particle_system.add_particle(200,200, 4);
 
 		setInterval(step_game_frame.bind(undefined, ctx, game), 1000 / 60);
 	});
