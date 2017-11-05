@@ -173,10 +173,10 @@ UFOCorsairEnemy.prototype.update = function(game) {
 		this.fire_timer = 30 * 5;
 	}
 
-	if (Math.random() > 0.8) {
-		var offset = point_offset(this.angle, 32);
-		game.particle_system.add_particle(this.px + offset.px, this.py + offset.py, 2)
-	}
+	// if (Math.random() > 0.8) {
+	// 	var offset = point_offset(this.angle, 32);
+	// 	game.particle_system.add_particle(this.px + offset.px, this.py + offset.py, 2)
+	// }
 };
 UFOCorsairEnemy.prototype.draw = function(ctx) {
 	ctx.save();
@@ -192,27 +192,27 @@ UFOCorsairEnemy.prototype.draw = function(ctx) {
 UFOCorsairEnemy.prototype.fire = function(game) {
 	var offset = point_offset(this.angle, 32);
 	game.entities_to_add.push(new EnemyBullet(game, this.px + offset.px, this.py + offset.py, [
-		{ repeat: 5, timeout: 40, angle: this.angle, speed: 2, da: 0.2 },
+		{ trail: { thickness: 0.05 }, repeat: 5, timeout: 40, angle: this.angle, speed: 2, da: 0.2 },
 		{ delete: true },
 	]));
 	game.entities_to_add.push(new EnemyBullet(game, this.px + offset.px, this.py + offset.py, [
-		{ repeat: 5, timeout: 40, angle: this.angle, speed: 2, da: -0.2 },
+		{ trail: { thickness: 0.05 }, repeat: 5, timeout: 40, angle: this.angle, speed: 2, da: -0.2 },
 		{ delete: true },
 	]));
 	game.entities_to_add.push(new EnemyBullet(game, this.px + offset.px, this.py + offset.py, [
-		{ repeat: 5, timeout: 40, angle: this.angle, speed: 2, da: 0.6 },
+		{ trail: { thickness: 0.05 }, repeat: 5, timeout: 40, angle: this.angle, speed: 2, da: 0.6 },
 		{ delete: true },
 	]));
 	game.entities_to_add.push(new EnemyBullet(game, this.px + offset.px, this.py + offset.py, [
-		{ repeat: 5, timeout: 40, angle: this.angle, speed: 2, da: -0.6 },
+		{ trail: { thickness: 0.05 }, repeat: 5, timeout: 40, angle: this.angle, speed: 2, da: -0.6 },
 		{ delete: true },
 	]));
 	game.entities_to_add.push(new EnemyBullet(game, this.px + offset.px, this.py + offset.py, [
-		{ repeat: 5, timeout: 40, angle: this.angle, speed: 2, da: 1 },
+		{ trail: { thickness: 0.05 }, repeat: 5, timeout: 40, angle: this.angle, speed: 2, da: 1 },
 		{ delete: true },
 	]));
 	game.entities_to_add.push(new EnemyBullet(game, this.px + offset.px, this.py + offset.py, [
-		{ repeat: 5, timeout: 40, angle: this.angle, speed: 2, da: -1 },
+		{ trail: { thickness: 0.05 }, repeat: 5, timeout: 40, angle: this.angle, speed: 2, da: -1 },
 		{ delete: true },
 	]));
 };
@@ -259,6 +259,12 @@ EnemyBullet.prototype.update = function(game) {
 			this.current_action.angle += this.current_action.da;
 			this.current_action.sx = Math.cos(this.current_action.angle / 180 * Math.PI) * this.current_action.speed;
 			this.current_action.sy = Math.sin(this.current_action.angle / 180 * Math.PI) * this.current_action.speed;
+		}
+
+		if (this.current_action.trail) {
+			if (Math.random() < this.current_action.trail.thickness) {
+				game.particle_system.add_particle(this.px, this.py, 2);
+			}
 		}
 
 		this.px += this.current_action.sx;
