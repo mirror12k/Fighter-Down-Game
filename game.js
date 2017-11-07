@@ -201,7 +201,7 @@ UFOCorsairEnemy.prototype.draw = function(ctx) {
 UFOCorsairEnemy.prototype.fire = function(game) {
 	var offset = point_offset(this.angle, 32);
 
-	for (var da = 0.2; da < 1.4; da += 0.4) {
+	for (var da = 0.25; da < 2; da += 0.5) {
 		game.entities_to_add.push(new EnemyBullet(game, this.px + offset.px, this.py + offset.py, [
 			{
 				timeout: 20, repeat: 8,
