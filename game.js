@@ -24,6 +24,14 @@ function point_offset(angle, dist) {
 	return { px: dist * Math.cos(Math.PI * angle / 180), py: dist * Math.sin(Math.PI * angle / 180), };
 }
 
+function point_angle(fromx, fromy, tox, toy) {
+	var dx = tox - fromx;
+	var dy = toy - fromy;
+	var angle = Math.atan2(dy, dx);
+	// console.log("angle: ", angle / Math.PI * 180);
+	return angle / Math.PI * 180;
+}
+
 function GameSystem(images) {
 	this.images = images;
 
@@ -116,33 +124,49 @@ UFOEnemy.prototype.update = function(game) {
 	this.angle += 1;
 	this.angle %= 360;
 	if (this.angle % 180 == 0) {
-		this.fire(game, 200, 100);
+		this.fire(game, 200, 200);
 	}
 };
 
 UFOEnemy.prototype.fire = function(game, tx, ty) {
-	var dx = tx - this.px;
-	var dy = ty - this.py;
-	var angle = Math.atan2(dy, dx);
-	console.log("angle: ", angle / Math.PI * 180);
-
-	var sx = Math.cos(angle) * 2;
-	var sy = Math.sin(angle) * 2;
-
-	for (var a = 0; a < 360; a += 30) {
-		var bx = Math.cos(a / 180 * Math.PI) * 40;
-		var by = Math.sin(a / 180 * Math.PI) * 40;
-
+	var target_angle = point_angle(this.px, this.py, tx, ty);
+	for (var d = -120; d <= 120; d += 60) {
+		var offset = point_offset(target_angle + 90, d);
+		
 		var path = [
-			{ timeout: 30, px: this.px + bx, py: this.py + by, },
+			{ timeout: 30, px: this.px + offset.px, py: this.py + offset.py, },
 			{ timeout: 30, },
-			{ timeout: 180, da: 1, fda: 0.99, angle: angle / Math.PI * 180, speed: 2 },
-			// { sx: sx, sy: sy, },
-			{ timeout: 60, },
-			{ delete: true, },
+			{ timeout: 30, repeat: 4,
+				spawn: [{ path: [{timeout: 360, speed: 2, angle: target_angle}, {delete: true}] }],
+			},
+			{delete: true},
 		];
+
 		game.entities_to_add.push(new EnemyBullet(game, this.px, this.py, path));
 	}
+
+	// var dx = tx - this.px;
+	// var dy = ty - this.py;
+	// var angle = Math.atan2(dy, dx);
+	// console.log("angle: ", angle / Math.PI * 180);
+
+	// var sx = Math.cos(angle) * 2;
+	// var sy = Math.sin(angle) * 2;
+
+	// for (var a = 0; a < 360; a += 30) {
+	// 	var bx = Math.cos(a / 180 * Math.PI) * 40;
+	// 	var by = Math.sin(a / 180 * Math.PI) * 40;
+
+	// 	var path = [
+	// 		{ timeout: 30, px: this.px + bx, py: this.py + by, },
+	// 		{ timeout: 30, },
+	// 		{ timeout: 180, da: 1, fda: 0.99, angle: angle / Math.PI * 180, speed: 2 },
+	// 		// { sx: sx, sy: sy, },
+	// 		{ timeout: 60, },
+	// 		{ delete: true, },
+	// 	];
+	// 	game.entities_to_add.push(new EnemyBullet(game, this.px, this.py, path));
+	// }
 };
 
 function RotatingCrystalEntity(game, px, py) {
@@ -166,7 +190,7 @@ RotatingCrystalEntity.prototype.update = function(game) {
 
 function UFOCorsairEnemy(game, px, py) {
 	ScreenEntity.call(this, game, px, py, 128, 64, game.images.ufo_corsair);
-	this.crystal_ent = new RotatingCrystalEntity(game, 32, 0);
+	this.crystal_ent = new RotatingCrystalEntity(game, this.width / 4, 0);
 	this.angle = 0;
 
 	this.fire_timer = 30 * 5;
@@ -199,7 +223,7 @@ UFOCorsairEnemy.prototype.draw = function(ctx) {
 	ctx.restore();
 };
 UFOCorsairEnemy.prototype.fire = function(game) {
-	var offset = point_offset(this.angle, 32);
+	var offset = point_offset(this.angle, this.width / 4);
 
 	for (var da = 0.25; da < 2; da += 0.5) {
 		game.entities_to_add.push(new EnemyBullet(game, this.px + offset.px, this.py + offset.py, [
@@ -418,7 +442,7 @@ function main () {
 		var game = new GameSystem(images);
 
 		game.entities.push(new EnemyBullet(game, 8,8, []));
-		// game.entities.push(new UFOEnemy(game, 100,100));
+		game.entities.push(new UFOEnemy(game, 100,100));
 		game.entities.push(new UFOCorsairEnemy(game, 300,100));
 		game.particle_system = new ParticleEffectSystem(game, '#404');
 		game.entities.push(game.particle_system);
