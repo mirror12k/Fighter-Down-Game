@@ -89,10 +89,11 @@ function ScreenEntity(game, px, py, width, height, img) {
 	this.px = px;
 	this.py = py;
 	this.angle = 0;
+	this.frame = 0;
+	this.max_frame = 1;
 	this.width = width;
 	this.height = height;
 	this.img = img;
-
 }
 ScreenEntity.prototype = Object.create(Entity.prototype);
 ScreenEntity.prototype.draw = function(ctx) {
@@ -101,10 +102,105 @@ ScreenEntity.prototype.draw = function(ctx) {
 
 	ctx.translate(this.px, this.py);
 	ctx.rotate(Math.PI * (Math.floor(this.angle / 15) * 15) / 180);
-	ctx.drawImage(this.img, 0 - this.width / 2, 0 - this.height / 2, this.width, this.height);
+	ctx.drawImage(this.img,
+		this.frame * (this.img.width / this.max_frame), 0, this.img.width / this.max_frame, this.img.height,
+		0 - this.width / 2, 0 - this.height / 2, this.width, this.height);
 
 	ctx.restore();
 };
+
+
+
+function ParticleEffectSystem(game, fill_style) {
+	this.fill_style = fill_style;
+	this.particles = [];
+
+	this.particle_image = game.images.particle_effect_generic;
+	this.width = 32;
+	this.height = 8;
+
+	this.frame_width = 8;
+
+	this.max_frame = this.width / this.frame_width;
+
+	this.particle_width = 16;
+	this.particle_height = 16;
+
+	this.prepare_buffer();
+}
+ParticleEffectSystem.prototype = Object.create(ScreenEntity.prototype);
+ParticleEffectSystem.prototype.prepare_buffer = function() {
+	this.buffer_canvas = document.createElement('canvas');
+	this.buffer_canvas.width = this.width;
+	this.buffer_canvas.height = this.height;
+	var buffer_context = this.buffer_canvas.getContext('2d');
+
+	buffer_context.fillStyle = this.fill_style;
+	buffer_context.fillRect(0,0, this.buffer_canvas.width, this.buffer_canvas.height);
+
+	buffer_context.globalCompositeOperation = "destination-atop";
+	buffer_context.drawImage(this.particle_image, 0,0);
+};
+ParticleEffectSystem.prototype.add_particle = function(px, py, speed) {
+	var sx = ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
+	var sy = ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
+
+	this.particles.push({
+		px: px,
+		py: py,
+		sx: sx,
+		sy: sy,
+		sr: Math.random() - 0.5,
+		angle: Math.random() * 360,
+		frame: 0,
+	});
+};
+ParticleEffectSystem.prototype.update = function(game) {
+	for (var i = this.particles.length - 1; i >= 0; i--) {
+		this.particles[i].px += this.particles[i].sx;
+		this.particles[i].py += this.particles[i].sy;
+		this.particles[i].angle += this.particles[i].sr;
+
+		if (Math.random() > 0.95) {
+			this.particles[i].frame++;
+			if (this.particles[i].frame >= this.max_frame) {
+				this.particles.splice(i, 1);
+			}
+		}
+	}
+};
+ParticleEffectSystem.prototype.draw = function(ctx) {
+
+	// console.log("drawing ", this.particles.length, "particles");
+	for (var i = 0; i < this.particles.length; i++) {
+		var p = this.particles[i];
+		ctx.save();
+
+		ctx.translate(p.px, p.py);
+		ctx.rotate(Math.PI * (Math.floor(p.angle / 15) * 15) / 180);
+		// var width = this.particle_width;
+		// var height = this.particle_height;
+		var width = this.particle_width * ((6 - p.frame) / 4);
+		var height = this.particle_height * ((6 - p.frame) / 4);
+		ctx.drawImage(this.buffer_canvas, 
+			this.frame_width * p.frame, 0, this.frame_width, this.height,
+			0 - width / 2, 0 - height / 2, width, height);
+
+		ctx.restore();
+	}
+};
+
+
+
+
+
+
+
+
+
+
+
+
 
 function UFOEnemy(game, px, py) {
 	ScreenEntity.call(this, game, px, py, 64, 64, game.images.ufo);
@@ -168,6 +264,51 @@ UFOEnemy.prototype.fire = function(game, tx, ty) {
 	// 	game.entities_to_add.push(new EnemyBullet(game, this.px, this.py, path));
 	// }
 };
+
+function UFOPlatformSection(game, px, py) {
+	ScreenEntity.call(this, game, px, py, 64, 64, game.images.platform_sections);
+	this.frame = Math.floor(Math.random() * 4);
+	this.max_frame = 4;
+	this.angle = Math.random() * 360;
+}
+UFOPlatformSection.prototype = Object.create(ScreenEntity.prototype);
+
+function UFOPlatform(game, px, py) {
+	ScreenEntity.call(this, game, px, py, 64, 64, game.images.platform_core);
+
+	this.sections = [];
+
+	var section_count = Math.floor(Math.random() * 3) + 3;
+
+	for (var i = 0; i < section_count; i++) {
+		var offset = point_offset(i * (360 / section_count) + Math.random() * (360 / section_count), 48);
+		this.sections.push(new UFOPlatformSection(game, offset.px, offset.py));
+	}
+
+	this.angle = 0;
+}
+UFOPlatform.prototype = Object.create(ScreenEntity.prototype);
+UFOPlatform.prototype.draw = function(ctx) {
+	ctx.save();
+
+	ctx.translate(this.px, this.py);
+	ctx.rotate(Math.PI * (Math.floor(this.angle / 15) * 15) / 180);
+
+	for (var i = 0; i < this.sections.length; i++) {
+		this.sections[i].draw(ctx);
+	}
+	ctx.drawImage(this.img,
+		this.frame * this.width, 0, this.img.width, this.img.height,
+		0 - this.width / 2, 0 - this.height / 2, this.width, this.height);
+
+	ctx.restore();
+};
+UFOPlatform.prototype.update = function(game) {
+	this.angle += 0.5;
+	this.angle %= 360;
+};
+
+// UFOPlatform.prototype.fire = function(game, tx, ty) {};
 
 function RotatingCrystalEntity(game, px, py) {
 	ScreenEntity.call(this, game, px, py, 16, 16, game.images.purple_crystal);
@@ -333,87 +474,6 @@ EnemyBullet.prototype.update = function(game) {
 };
 
 
-function ParticleEffectSystem(game, fill_style) {
-	this.fill_style = fill_style;
-	this.particles = [];
-
-	this.particle_image = game.images.particle_effect_generic;
-	this.width = 32;
-	this.height = 8;
-
-	this.frame_width = 8;
-
-	this.max_frame = this.width / this.frame_width;
-
-	this.particle_width = 16;
-	this.particle_height = 16;
-
-	this.prepare_buffer();
-}
-ParticleEffectSystem.prototype = Object.create(ScreenEntity.prototype);
-ParticleEffectSystem.prototype.prepare_buffer = function() {
-	this.buffer_canvas = document.createElement('canvas');
-	this.buffer_canvas.width = this.width;
-	this.buffer_canvas.height = this.height;
-	var buffer_context = this.buffer_canvas.getContext('2d');
-
-	buffer_context.fillStyle = this.fill_style;
-	buffer_context.fillRect(0,0, this.buffer_canvas.width, this.buffer_canvas.height);
-
-	buffer_context.globalCompositeOperation = "destination-atop";
-	buffer_context.drawImage(this.particle_image, 0,0);
-};
-ParticleEffectSystem.prototype.add_particle = function(px, py, speed) {
-	var sx = ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
-	var sy = ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
-
-	this.particles.push({
-		px: px,
-		py: py,
-		sx: sx,
-		sy: sy,
-		sr: Math.random() - 0.5,
-		angle: Math.random() * 360,
-		frame: 0,
-	});
-};
-ParticleEffectSystem.prototype.update = function(game) {
-	for (var i = this.particles.length - 1; i >= 0; i--) {
-		this.particles[i].px += this.particles[i].sx;
-		this.particles[i].py += this.particles[i].sy;
-		this.particles[i].angle += this.particles[i].sr;
-
-		if (Math.random() > 0.95) {
-			this.particles[i].frame++;
-			if (this.particles[i].frame >= this.max_frame) {
-				this.particles.splice(i, 1);
-			}
-		}
-	}
-};
-ParticleEffectSystem.prototype.draw = function(ctx) {
-
-	// console.log("drawing ", this.particles.length, "particles");
-	for (var i = 0; i < this.particles.length; i++) {
-		var p = this.particles[i];
-		ctx.save();
-
-		ctx.translate(p.px, p.py);
-		ctx.rotate(Math.PI * (Math.floor(p.angle / 15) * 15) / 180);
-		// var width = this.particle_width;
-		// var height = this.particle_height;
-		var width = this.particle_width * ((6 - p.frame) / 4);
-		var height = this.particle_height * ((6 - p.frame) / 4);
-		ctx.drawImage(this.buffer_canvas, 
-			this.frame_width * p.frame, 0, this.frame_width, this.height,
-			0 - width / 2, 0 - height / 2, width, height);
-
-		ctx.restore();
-	}
-};
-
-
-
 function main () {
 	var canvas = document.querySelector('#game_canvas');
 	var ctx = canvas.getContext('2d');
@@ -434,6 +494,9 @@ function main () {
 		enemy_bullet_overlay_effect: "enemy_bullet_overlay_effect.png",
 		purple_crystal: "purple_crystal.png",
 		particle_effect_generic: "particle_effect_generic.png",
+
+		platform_core: "platform_core.png",
+		platform_sections: "platform_sections.png",
 	};
 
 	load_all_images(images, function () {
@@ -442,8 +505,9 @@ function main () {
 		var game = new GameSystem(images);
 
 		game.entities.push(new EnemyBullet(game, 8,8, []));
-		game.entities.push(new UFOEnemy(game, 100,100));
-		game.entities.push(new UFOCorsairEnemy(game, 300,100));
+		game.entities.push(new UFOPlatform(game, 100,100));
+		// game.entities.push(new UFOEnemy(game, 100,100));
+		// game.entities.push(new UFOCorsairEnemy(game, 300,100));
 		game.particle_system = new ParticleEffectSystem(game, '#404');
 		game.entities.push(game.particle_system);
 
