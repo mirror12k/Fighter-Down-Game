@@ -80,6 +80,8 @@ function ScreenEntity(game, px, py, width, height, img) {
 	this.width = width;
 	this.height = height;
 	this.img = img;
+
+	this.angle_granularity = 15;
 }
 ScreenEntity.prototype = Object.create(Entity.prototype);
 ScreenEntity.prototype.draw = function(ctx) {
@@ -87,7 +89,7 @@ ScreenEntity.prototype.draw = function(ctx) {
 	ctx.save();
 
 	ctx.translate(this.px, this.py);
-	ctx.rotate(Math.PI * (Math.floor(this.angle / 15) * 15) / 180);
+	ctx.rotate(Math.PI * (Math.floor(this.angle / this.angle_granularity) * this.angle_granularity) / 180);
 	ctx.drawImage(this.img,
 		this.frame * (this.img.width / this.max_frame), 0, this.img.width / this.max_frame, this.img.height,
 		0 - this.width / 2, 0 - this.height / 2, this.width, this.height);
@@ -282,6 +284,8 @@ PathEntity.prototype.update = function(game) {
 function EnemyBullet(game, px, py, path, img) {
 	img = img || game.images.enemy_bullet_orange;
 	PathEntity.call(this, game, px, py, 16, 16, img, path);
+
+	this.angle_granularity = 5;
 }
 EnemyBullet.prototype = Object.create(PathEntity.prototype);
 
@@ -487,18 +491,18 @@ UFOStation.prototype.draw = function(ctx) {
 	ctx.rotate(Math.PI * (Math.floor(this.angle / 15) * 15) / 180);
 
 	ctx.save();
-	ctx.rotate(Math.PI * (Math.floor(this.ring_angle / 15) * 15) / 180);
+	ctx.rotate(Math.PI * (Math.floor(this.ring_angle / 5) * 5) / 180);
 	for (var i = 0; i < this.outer_ring.length; i++) {
 		this.outer_ring[i].draw(ctx);
 	}
+	ctx.restore();
+
+	ctx.save();
+	ctx.rotate(Math.PI * (Math.floor(-this.ring_angle / 5) * 5) / 180);
 	for (var i = 0; i < this.inner_ring.length; i++) {
 		this.inner_ring[i].draw(ctx);
 	}
 	ctx.restore();
-
-	// ctx.save();
-	// ctx.rotate(Math.PI * (Math.floor(this.ring_angle / 15) * 15) / 180);
-	// ctx.restore();
 
 	ctx.drawImage(this.img,
 		this.frame * this.width, 0, this.img.width, this.img.height,
@@ -508,33 +512,42 @@ UFOStation.prototype.draw = function(ctx) {
 };
 
 UFOStation.prototype.spawn_bullets = function(game) {
+	// spread triangle fire
+	if (this.firing % 15 === 0) {
+		var target_angle = point_angle(this.px, this.py, this.fire_target.px, this.fire_target.py);
+		// determine spread for this tick
+		var spread = (135 - this.firing) / 15;
+
+		// fire bullets in a spread
+		for (var i = -spread; i <= spread; i += 2) {
+			game.entities_to_add.push(new EnemyBullet(game, this.px, this.py, [
+				{ timeout: 240, angle: target_angle + i * 5, speed: 2 }
+			]));
+		}
+	}
+
+	// // focused bar fire
+	// if (this.firing % 45 === 0) {
+	// 	var target_angle = point_angle(this.px, this.py, this.fire_target.px, this.fire_target.py);
+
+	// 	// fire bullets in a spread
+	// 	for (var i = -2; i <= 2; i++) {
+	// 		// game.entities_to_add.push(new EnemyBullet(game, this.px, this.py, [
+	// 		// 	{ timeout: 240, angle: target_angle + i * 5, speed: 2 }
+	// 		// ], game.images.bright_purple_square_bullet));
+	// 		// game.entities_to_add.push(new EnemyBullet(game, this.px, this.py, [
+	// 		// 	{ timeout: 240, angle: target_angle + i * 5, speed: 3 }
+	// 		// ], game.images.bright_purple_square_bullet));
+	// 		game.entities_to_add.push(new EnemyBullet(game, this.px, this.py, [
+	// 			{ timeout: 240, angle: target_angle + i * 5, speed: 2 }
+	// 		], game.images.bright_purple_square_bullet));
+	// 	}
+	// }
+
 	this.firing--;
-
-	var target_angle = point_angle(this.px, this.py, this.fire_target.px, this.fire_target.py);
-	// slightly randomize target aim by +/- 4 degrees
-	target_angle += (Math.floor(Math.random() * 101) - 50) / 50 * 4;
-
-	// // spawn linear bullet
-	// game.entities_to_add.push(new EnemyBullet(game, this.px, this.py, [
-	// 	{ timeout: 240, angle: target_angle, speed: 2 + Math.random() },
-	// ], game.images.bright_purple_square_bullet));
-
-	// prepare burst spawn
-	var spawn_burst = [];
-	for (var i = 0; i < 360 / 45; i++) {
-		spawn_burst.push({ img: game.images.bright_purple_square_bullet, path: [{ timeout: 120, angle: target_angle + i * 45, speed: 1 }] });
-	}
-
-	// spawn flak bullet
-	if (Math.random() < 0.1) {
-		game.entities_to_add.push(new EnemyBullet(game, this.px, this.py, [
-			{ trail: { thickness: 0.01 }, timeout: 120, angle: target_angle, speed: 1.5 + Math.random() * 2 },
-			{ spawn: spawn_burst, delete: true },
-		], game.images.purple_square_bullet));
-	}
 };
 UFOStation.prototype.fire = function(game, tx, ty) {
-	this.firing = 40;
+	this.firing = 135;
 	this.fire_target = { px: tx, py: ty };
 
 	this.spawn_bullets(game);
@@ -657,8 +670,9 @@ function main () {
 
 		var game = new GameSystem(images);
 
-		game.entities.push(new UFOStation(game, 320,240, [
-			{ sy: 0.1 },
+		game.entities.push(new UFOStation(game, 320, 0, [
+			{ timeout: 120, sy: 0.1 },
+			{ timeout: 360, repeat: 4, sy: 0.1, call: [{ method: 'fire', args: [320, 240] }] },
 		]));
 
 		// game.entities.push(new UFOEnemy(game, 100,100, [
