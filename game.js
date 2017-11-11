@@ -38,6 +38,28 @@ function GameSystem(images) {
 	this.entities = [];
 	this.entities_to_add = [];
 	this.entities_to_remove = [];
+
+
+	this.keystate = {
+		W: false,
+		A: false,
+		S: false,
+		D: false,
+		' ': false,
+	};
+	document.addEventListener('keydown', (function (e) {
+		e = e || window.event;
+		var charcode = String.fromCharCode(e.keyCode);
+		this.keystate[charcode] = true;
+		// console.log('keydown: ', charcode);
+	}).bind(this));
+
+	document.addEventListener('keyup', (function (e) {
+		e = e || window.event;
+		var charcode = String.fromCharCode(e.keyCode);
+		this.keystate[charcode] = false;
+		// console.log('keyup: ', charcode);
+	}).bind(this));
 }
 GameSystem.prototype.update = function () {
 	for (var i = 0; i < this.entities.length; i++) {
@@ -282,12 +304,20 @@ PathEntity.prototype.update = function(game) {
 };
 
 function EnemyBullet(game, px, py, path, img) {
-	img = img || game.images.enemy_bullet_orange;
+	img = img || game.images.orange_round_bullet;
 	PathEntity.call(this, game, px, py, 16, 16, img, path);
 
 	this.angle_granularity = 5;
 }
 EnemyBullet.prototype = Object.create(PathEntity.prototype);
+
+function PlayerBullet(game, px, py, path, img) {
+	img = img || game.images.orange_round_bullet;
+	PathEntity.call(this, game, px, py, 32, 32, img, path);
+
+	this.angle_granularity = 5;
+}
+PlayerBullet.prototype = Object.create(PathEntity.prototype);
 
 
 
@@ -636,10 +666,76 @@ UFOCorsairEnemy.prototype.fire = function(game) {
 };
 
 
+function PlayerShip(game, px, py) {
+	PathEntity.call(this, game, px, py, 64, 64, game.images.fighter);
+	// this.angle = 0;
+
+	this.fire_timer = 0;
+	this.speed = 4;
+}
+PlayerShip.prototype = Object.create(ScreenEntity.prototype);
+PlayerShip.prototype.update = function(game) {
+	ScreenEntity.prototype.update.call(this, game);
+
+	if (game.keystate.A) {
+		this.px -= this.speed;
+	} else if (game.keystate.D) {
+		this.px += this.speed;
+	}
+
+	if (game.keystate.W) {
+		this.py -= this.speed;
+	} else if (game.keystate.S) {
+		this.py += this.speed;
+	}
+
+	if (this.fire_timer) {
+		this.fire_timer--;
+	} else {
+		if (game.keystate[' ']) {
+			this.fire(game);
+			this.fire_timer = 3;
+		}
+	}
+
+	// this.fire_timer--;
+	// if (this.fire_timer <= 0) {
+	// 	this.fire(game);
+	// 	this.fire_timer = 30 * 5;
+	// }
+
+	// if (Math.random() > 0.8) {
+	// 	var offset = point_offset(this.angle, 32);
+	// 	game.particle_system.add_particle(this.px + offset.px, this.py + offset.py, 2)
+	// }
+};
+// PlayerShip.prototype.draw = function(ctx) {
+// 	ctx.save();
+
+// 	ctx.translate(this.px, this.py);
+// 	ctx.rotate(Math.PI * (Math.floor(this.angle / 15) * 15) / 180);
+// 	ctx.drawImage(this.img, 0 - this.width / 2, 0 - this.height / 2, this.width, this.height);
+
+// 	this.crystal_ent.draw(ctx);
+
+// 	ctx.restore();
+// };
+PlayerShip.prototype.fire = function(game) {
+	game.entities_to_add.push(new PlayerBullet(game, this.px - this.width / 8, this.py - this.height / 2, [
+		{ timeout: 40, repeat: 8, sy: -16 },
+	], game.images.red_streak_bullet));
+	game.entities_to_add.push(new PlayerBullet(game, this.px + this.width / 8, this.py - this.height / 2, [
+		{ timeout: 40, repeat: 8, sy: -16 },
+	], game.images.red_streak_bullet));
+};
+
+
 function main () {
 	var canvas = document.querySelector('#game_canvas');
 	var ctx = canvas.getContext('2d');
 	ctx.imageSmoothingEnabled = false;
+
+
 
 	var images = {
 		fighter: "fighter.png",
@@ -650,10 +746,12 @@ function main () {
 		ufo_small: "ufo_small.png",
 		ufo_corsair: "ufo_corsair.png",
 
+		red_streak_bullet: "red_streak_bullet.png",
 		bright_purple_square_bullet: "bright_purple_square_bullet.png",
 		purple_square_bullet: "purple_square_bullet.png",
-		enemy_bullet_orange: "enemy_bullet_orange.png",
-		enemy_bullet_overlay_effect: "enemy_bullet_overlay_effect.png",
+		orange_round_bullet: "orange_round_bullet.png",
+		// enemy_bullet_orange: "enemy_bullet_orange.png",
+		// enemy_bullet_overlay_effect: "enemy_bullet_overlay_effect.png",
 		purple_crystal: "purple_crystal.png",
 		particle_effect_generic: "particle_effect_generic.png",
 
@@ -669,6 +767,8 @@ function main () {
 		console.log("all images loaded");
 
 		var game = new GameSystem(images);
+
+		game.entities.push(new PlayerShip(game, 320, 240));
 
 		game.entities.push(new UFOStation(game, 320, 0, [
 			{ timeout: 120, sy: 0.1 },
