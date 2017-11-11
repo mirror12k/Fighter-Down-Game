@@ -24,6 +24,13 @@ function point_offset(angle, dist) {
 	return { px: dist * Math.cos(Math.PI * angle / 180), py: dist * Math.sin(Math.PI * angle / 180), };
 }
 
+function d2_point_offset(angle, px, py) {
+	return {
+		px: px * Math.cos(Math.PI * angle / 180) - py * Math.sin(Math.PI * angle / 180),
+		py: py * Math.cos(Math.PI * angle / 180) + px * Math.sin(Math.PI * angle / 180),
+	};
+}
+
 function point_angle(fromx, fromy, tox, toy) {
 	var dx = tox - fromx;
 	var dy = toy - fromy;
@@ -62,9 +69,6 @@ function GameSystem(images) {
 	}).bind(this));
 }
 GameSystem.prototype.update = function () {
-	for (var i = 0; i < this.entities.length; i++) {
-		this.entities[i].update(this);
-	}
 
 	for (var i = 0; i < this.entities_to_remove.length; i++) {
 		var index = this.entities.indexOf(this.entities_to_remove[i]);
@@ -76,6 +80,10 @@ GameSystem.prototype.update = function () {
 	for (var i = 0; i < this.entities_to_add.length; i++)
 		this.entities.push(this.entities_to_add[i]);
 	this.entities_to_add = [];
+	
+	for (var i = 0; i < this.entities.length; i++) {
+		this.entities[i].update(this);
+	}
 };
 GameSystem.prototype.draw = function (ctx) {
 	ctx.clearRect(0, 0, 640, 480);
@@ -670,8 +678,11 @@ function PlayerShip(game, px, py) {
 	PathEntity.call(this, game, px, py, 64, 64, game.images.fighter);
 	// this.angle = 0;
 
+	this.tilt_angle = 0;
 	this.fire_timer = 0;
 	this.speed = 4;
+
+	this.angle_granularity = 3;
 }
 PlayerShip.prototype = Object.create(ScreenEntity.prototype);
 PlayerShip.prototype.update = function(game) {
@@ -679,9 +690,22 @@ PlayerShip.prototype.update = function(game) {
 
 	if (game.keystate.A) {
 		this.px -= this.speed;
+		if (this.tilt_angle > -15) {
+			this.tilt_angle -= 3;
+		}
 	} else if (game.keystate.D) {
 		this.px += this.speed;
+		if (this.tilt_angle < 15) {
+			this.tilt_angle += 3;
+		}
+	} else {
+		if (this.tilt_angle < 0) {
+			this.tilt_angle += 3;
+		} else if (this.tilt_angle > 0) {
+			this.tilt_angle -= 3;
+		}
 	}
+	this.angle = this.tilt_angle;
 
 	if (game.keystate.W) {
 		this.py -= this.speed;
@@ -721,11 +745,13 @@ PlayerShip.prototype.update = function(game) {
 // 	ctx.restore();
 // };
 PlayerShip.prototype.fire = function(game) {
-	game.entities_to_add.push(new PlayerBullet(game, this.px - this.width / 8, this.py - this.height / 2, [
-		{ timeout: 40, repeat: 8, sy: -16 },
+	var offset = d2_point_offset(this.tilt_angle, -this.width / 8, -this.height / 2);
+	game.entities_to_add.push(new PlayerBullet(game, this.px + offset.px, this.py + offset.py, [
+		{ timeout: 40, angle: this.tilt_angle - 90, speed: 16 },
 	], game.images.red_streak_bullet));
-	game.entities_to_add.push(new PlayerBullet(game, this.px + this.width / 8, this.py - this.height / 2, [
-		{ timeout: 40, repeat: 8, sy: -16 },
+	offset = d2_point_offset(this.tilt_angle, this.width / 8, -this.height / 2);
+	game.entities_to_add.push(new PlayerBullet(game, this.px + offset.px, this.py + offset.py, [
+		{ timeout: 40, angle: this.tilt_angle - 90, speed: 16 },
 	], game.images.red_streak_bullet));
 };
 
