@@ -58,6 +58,7 @@ function GameSystem(images) {
 	};
 	document.addEventListener('keydown', (function (e) {
 		e = e || window.event;
+		e.preventDefault();
 		var charcode = String.fromCharCode(e.keyCode);
 		this.keystate[charcode] = true;
 		// console.log('keydown: ', charcode);
@@ -65,6 +66,7 @@ function GameSystem(images) {
 
 	document.addEventListener('keyup', (function (e) {
 		e = e || window.event;
+		e.preventDefault();
 		var charcode = String.fromCharCode(e.keyCode);
 		this.keystate[charcode] = false;
 		// console.log('keyup: ', charcode);
@@ -158,23 +160,23 @@ ScreenEntity.prototype.draw = function(ctx) {
 
 function ParticleEffectSystem(game, config) {
 	this.fill_style = config.fill_style;
+	this.particle_image = config.image || game.images.particle_effect_generic;
+
 	this.particles = [];
 
-	this.particle_image = config.image || game.images.particle_effect_generic;
 	this.width = 32;
 	this.height = 8;
-
 	this.frame_width = 8;
-
-	this.max_frame = this.width / this.frame_width;
+	this.max_frame = config.max_frame || (this.width / this.frame_width);
 
 	this.particle_width = config.particle_size || 16;
 	this.particle_height = config.particle_size || 16;
 
 	this.particle_longevity = config.particle_longevity || 0.05;
 	this.particle_respawn = config.particle_respawn || 0;
+	this.dynamic_images = config.dynamic_images;
 
-	if (this.fill_style !== undefined)
+	if (this.fill_style !== undefined && !this.dynamic_images)
 		this.prepare_buffer();
 }
 ParticleEffectSystem.prototype = Object.create(ScreenEntity.prototype);
@@ -195,6 +197,33 @@ ParticleEffectSystem.prototype.add_particle = function(px, py, speed) {
 	var sy = ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
 
 	this.particles.push({
+		px: px,
+		py: py,
+		sx: sx,
+		sy: sy,
+		sr: Math.random() - 0.5,
+		angle: Math.random() * 360,
+		frame: 0,
+	});
+};
+ParticleEffectSystem.prototype.add_image_particle = function(image, width, height, px, py, speed) {
+	var sx = ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
+	var sy = ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
+
+	var sourcex = image.width * (Math.random() * 0.5);
+	var sourcey = image.height * (Math.random() * 0.5);
+	var width = width * (Math.random() * 0.25 + 0.25);
+	var height = height * (Math.random() * 0.25 + 0.25);
+
+	// var offsetx = Math.random() * width - width / 2;
+	// var offsety = Math.random() * height - height / 2;
+
+	this.particles.push({
+		image: image,
+		sourcex: sourcex,
+		sourcey: sourcey,
+		width: width,
+		height: height,
 		px: px,
 		py: py,
 		sx: sx,
@@ -235,7 +264,12 @@ ParticleEffectSystem.prototype.draw = function(ctx) {
 		// var height = this.particle_height;
 		var width = this.particle_width * ((6 - p.frame) / 4);
 		var height = this.particle_height * ((6 - p.frame) / 4);
-		if (this.fill_style !== undefined) {
+		if (this.dynamic_images) {
+			ctx.drawImage(p.image, 
+				p.sourcex, p.sourcey, p.width, p.height,
+				// this.frame_width * p.frame, 0, this.frame_width, this.height,
+				0 - p.width / 2, 0 - p.height / 2, p.width, p.height);
+		} else if (this.fill_style !== undefined) {
 			ctx.drawImage(this.buffer_canvas, 
 				this.frame_width * p.frame, 0, this.frame_width, this.height,
 				0 - width / 2, 0 - height / 2, width, height);
@@ -455,6 +489,10 @@ UFOEnemy.prototype.take_damage = function(game, damage) {
 			var offsetx = (Math.random() * this.width - (this.width / 2)) / 1.5;
 			var offsety = (Math.random() * this.height - (this.height / 2)) / 1.5;
 			game.particle_systems.explosion_particles.add_particle(this.px + offsetx, this.py + offsety, 2);
+		}
+		var count = Math.floor(1 + Math.random() * 2);
+		for (var i = 0; i < count; i++) {
+			game.particle_systems.ship_chunks.add_image_particle(this.img, this.width, this.height, this.px, this.py, 3);
 		}
 	}
 };
@@ -925,8 +963,13 @@ function main () {
 		// game.entities.push(new UFOCorsairEnemy(game, 300,100));
 		game.particle_systems.purple_particles = new ParticleEffectSystem(game, { fill_style: '#404', });
 		game.particle_systems.red_particles = new ParticleEffectSystem(game, { fill_style: '#f88', particle_size: 12, particle_longevity: 0.3, });
+		game.particle_systems.ship_chunks = new ParticleEffectSystem(game, {
+					dynamic_images: true,
+					max_frame: 1,
+					particle_longevity: 0.01, 
+				});
 		game.particle_systems.explosion_particles = new ParticleEffectSystem(game,
-				{ particle_size: 24, image: game.images.particle_effect_explosion, particle_longevity: 0.3, particle_respawn: 0.7 });
+				{ particle_size: 32, image: game.images.particle_effect_explosion, particle_longevity: 0.3, particle_respawn: 0.2 });
 
 		setInterval(step_game_frame.bind(undefined, ctx, game), 1000 / 60);
 	});
