@@ -96,6 +96,21 @@ GameSystem.prototype.draw = function (ctx) {
 	}
 };
 
+GameSystem.prototype.find_colliding = function(me, type, dist) {
+	var found = [];
+	for (var i = 0; i < this.entities.length; i++) {
+		var ent = this.entities[i];
+		if (ent instanceof type) {
+			if (Math.abs(ent.px - me.px) < dist && Math.abs(ent.py - me.py) < dist &&
+				Math.pow(Math.pow(ent.px - me.px, 2) + Math.pow(ent.py - me.py, 2), 0.5) < dist) {
+				found.push(ent);
+			}
+		}
+	}
+
+	return found;
+};
+
 
 function Entity(game) {}
 Entity.prototype.update = function(entities) {};
@@ -340,6 +355,7 @@ PlayerBullet.prototype = Object.create(PathEntity.prototype);
 
 function UFOEnemy(game, px, py, path) {
 	PathEntity.call(this, game, px, py, 64, 64, game.images.ufo, path);
+	this.health = 250;
 }
 UFOEnemy.prototype = Object.create(PathEntity.prototype);
 // UFOEnemy.prototype.draw = function(ctx) {
@@ -355,6 +371,12 @@ UFOEnemy.prototype.update = function(game) {
 	PathEntity.prototype.update.call(this, game);
 	this.angle += 1;
 	this.angle %= 360;
+
+	var colliding_bullets = game.find_colliding(this, PlayerBullet, 48);
+	for (var i = 0; i < colliding_bullets.length; i++) {
+		this.take_damage(game, 5);
+		game.entities_to_remove.push(colliding_bullets[i]);
+	}
 };
 
 UFOEnemy.prototype.fire = function(game, tx, ty) {
@@ -392,6 +414,13 @@ UFOEnemy.prototype.fire = function(game, tx, ty) {
 			{ delete: true, },
 		];
 		game.entities_to_add.push(new EnemyBullet(game, this.px, this.py, path));
+	}
+};
+
+UFOEnemy.prototype.take_damage = function(game, damage) {
+	this.health -= damage;
+	if (this.health <= 0) {
+		game.entities_to_remove.push(this);
 	}
 };
 
@@ -690,13 +719,17 @@ PlayerShip.prototype.update = function(game) {
 
 	if (game.keystate.A) {
 		this.px -= this.speed;
-		if (this.tilt_angle > -30) {
+		if (this.tilt_angle > 0) {
+			this.tilt_angle -= 9;
+		} else if (this.tilt_angle > -30) {
 			this.tilt_angle -= 3;
 		}
 		this.width = 64 - Math.abs(this.tilt_angle / 30 * 10);
 	} else if (game.keystate.D) {
 		this.px += this.speed;
-		if (this.tilt_angle < 30) {
+		if (this.tilt_angle < 0) {
+			this.tilt_angle += 9;
+		} else if (this.tilt_angle < 30) {
 			this.tilt_angle += 3;
 		}
 		this.width = 64 - Math.abs(this.tilt_angle / 30 * 10);
@@ -724,6 +757,14 @@ PlayerShip.prototype.update = function(game) {
 			this.fire_timer = 3;
 		}
 	}
+
+	var colliding_bullets = game.find_colliding(this, EnemyBullet, 24);
+	if (colliding_bullets.length > 0) {
+		for (var i = 0; i < colliding_bullets.length; i++) {
+			game.entities_to_remove.push(colliding_bullets[i]);
+		}
+	}
+
 
 	// this.fire_timer--;
 	// if (this.fire_timer <= 0) {
@@ -802,6 +843,16 @@ function main () {
 		game.entities.push(new UFOStation(game, 320, 0, [
 			{ timeout: 120, sy: 0.1 },
 			{ timeout: 360, repeat: 4, sy: 0.1, call: [{ method: 'fire', args: [320, 240] }] },
+		]));
+
+		game.entities.push(new UFOEnemy(game, 0,100, [
+			{ timeout: 640, sx: 1 },
+			{ timeout: 640, sx: -1 },
+		]));
+
+		game.entities.push(new UFOEnemy(game, 640,100, [
+			{ timeout: 640, sx: -1 },
+			{ timeout: 640, sx: 1 },
 		]));
 
 		// game.entities.push(new UFOEnemy(game, 100,100, [
