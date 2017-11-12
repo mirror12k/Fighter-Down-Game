@@ -80,7 +80,7 @@ GameSystem.prototype.update = function () {
 	for (var i = 0; i < this.entities_to_add.length; i++)
 		this.entities.push(this.entities_to_add[i]);
 	this.entities_to_add = [];
-	
+
 	for (var i = 0; i < this.entities.length; i++) {
 		this.entities[i].update(this);
 	}
@@ -680,7 +680,7 @@ function PlayerShip(game, px, py) {
 
 	this.tilt_angle = 0;
 	this.fire_timer = 0;
-	this.speed = 4;
+	this.speed = 6;
 
 	this.angle_granularity = 3;
 }
@@ -690,20 +690,23 @@ PlayerShip.prototype.update = function(game) {
 
 	if (game.keystate.A) {
 		this.px -= this.speed;
-		if (this.tilt_angle > -15) {
+		if (this.tilt_angle > -30) {
 			this.tilt_angle -= 3;
 		}
+		this.width = 64 - Math.abs(this.tilt_angle / 30 * 10);
 	} else if (game.keystate.D) {
 		this.px += this.speed;
-		if (this.tilt_angle < 15) {
+		if (this.tilt_angle < 30) {
 			this.tilt_angle += 3;
 		}
+		this.width = 64 - Math.abs(this.tilt_angle / 30 * 10);
 	} else {
 		if (this.tilt_angle < 0) {
 			this.tilt_angle += 3;
 		} else if (this.tilt_angle > 0) {
 			this.tilt_angle -= 3;
 		}
+		this.width = 64 - Math.abs(this.tilt_angle / 30 * 10);
 	}
 	this.angle = this.tilt_angle;
 
