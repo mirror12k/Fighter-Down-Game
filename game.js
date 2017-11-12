@@ -46,6 +46,8 @@ function GameSystem(images) {
 	this.entities_to_add = [];
 	this.entities_to_remove = [];
 
+	this.particle_systems = {};
+
 
 	this.keystate = {
 		W: false,
@@ -84,6 +86,11 @@ GameSystem.prototype.update = function () {
 	for (var i = 0; i < this.entities.length; i++) {
 		this.entities[i].update(this);
 	}
+
+	var keys = Object.keys(this.particle_systems);
+	for (var i = 0; i < keys.length; i++) {
+		this.particle_systems[keys[i]].update(this);
+	}
 };
 GameSystem.prototype.draw = function (ctx) {
 	ctx.clearRect(0, 0, 640, 480);
@@ -93,6 +100,11 @@ GameSystem.prototype.draw = function (ctx) {
 
 	for (var i = 0; i < this.entities.length; i++) {
 		this.entities[i].draw(ctx);
+	}
+
+	var keys = Object.keys(this.particle_systems);
+	for (var i = 0; i < keys.length; i++) {
+		this.particle_systems[keys[i]].draw(ctx);
 	}
 };
 
@@ -144,8 +156,8 @@ ScreenEntity.prototype.draw = function(ctx) {
 
 
 
-function ParticleEffectSystem(game, fill_style) {
-	this.fill_style = fill_style;
+function ParticleEffectSystem(game, config) {
+	this.fill_style = config.fill_style;
 	this.particles = [];
 
 	this.particle_image = game.images.particle_effect_generic;
@@ -156,8 +168,8 @@ function ParticleEffectSystem(game, fill_style) {
 
 	this.max_frame = this.width / this.frame_width;
 
-	this.particle_width = 16;
-	this.particle_height = 16;
+	this.particle_width = config.particle_size || 16;
+	this.particle_height = config.particle_size || 16;
 
 	this.prepare_buffer();
 }
@@ -304,7 +316,7 @@ PathEntity.prototype.update = function(game) {
 
 		if (this.current_action.trail) {
 			if (Math.random() < this.current_action.trail.thickness) {
-				game.particle_system.add_particle(this.px, this.py, 2);
+				game.particle_systems.purple_particles.add_particle(this.px, this.py, 2);
 			}
 		}
 
@@ -376,6 +388,8 @@ UFOEnemy.prototype.update = function(game) {
 	for (var i = 0; i < colliding_bullets.length; i++) {
 		this.take_damage(game, 5);
 		game.entities_to_remove.push(colliding_bullets[i]);
+		if (Math.random() < 0.3)
+			game.particle_systems.red_particles.add_particle(colliding_bullets[i].px, colliding_bullets[i].py, 3);
 	}
 };
 
@@ -664,7 +678,7 @@ UFOCorsairEnemy.prototype.update = function(game) {
 
 	// if (Math.random() > 0.8) {
 	// 	var offset = point_offset(this.angle, 32);
-	// 	game.particle_system.add_particle(this.px + offset.px, this.py + offset.py, 2)
+	// 	game.particle_systems.purple_particles.add_particle(this.px + offset.px, this.py + offset.py, 2)
 	// }
 };
 UFOCorsairEnemy.prototype.draw = function(ctx) {
@@ -774,7 +788,7 @@ PlayerShip.prototype.update = function(game) {
 
 	// if (Math.random() > 0.8) {
 	// 	var offset = point_offset(this.angle, 32);
-	// 	game.particle_system.add_particle(this.px + offset.px, this.py + offset.py, 2)
+	// 	game.particle_systems.purple_particles.add_particle(this.px + offset.px, this.py + offset.py, 2)
 	// }
 };
 // PlayerShip.prototype.draw = function(ctx) {
@@ -887,8 +901,8 @@ function main () {
 		// game.entities.push(new UFOPlatform(game, 500,100));
 		// game.entities.push(new UFOEnemy(game, 100,100));
 		// game.entities.push(new UFOCorsairEnemy(game, 300,100));
-		game.particle_system = new ParticleEffectSystem(game, '#404');
-		game.entities.push(game.particle_system);
+		game.particle_systems.purple_particles = new ParticleEffectSystem(game, { fill_style: '#404', });
+		game.particle_systems.red_particles = new ParticleEffectSystem(game, { fill_style: '#f88', particle_size: 12, });
 
 		setInterval(step_game_frame.bind(undefined, ctx, game), 1000 / 60);
 	});
