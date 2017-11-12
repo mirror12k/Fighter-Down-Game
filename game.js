@@ -160,7 +160,7 @@ function ParticleEffectSystem(game, config) {
 	this.fill_style = config.fill_style;
 	this.particles = [];
 
-	this.particle_image = game.images.particle_effect_generic;
+	this.particle_image = config.image || game.images.particle_effect_generic;
 	this.width = 32;
 	this.height = 8;
 
@@ -171,7 +171,11 @@ function ParticleEffectSystem(game, config) {
 	this.particle_width = config.particle_size || 16;
 	this.particle_height = config.particle_size || 16;
 
-	this.prepare_buffer();
+	this.particle_longevity = config.particle_longevity || 0.05;
+	this.particle_respawn = config.particle_respawn || 0;
+
+	if (this.fill_style !== undefined)
+		this.prepare_buffer();
 }
 ParticleEffectSystem.prototype = Object.create(ScreenEntity.prototype);
 ParticleEffectSystem.prototype.prepare_buffer = function() {
@@ -206,10 +210,14 @@ ParticleEffectSystem.prototype.update = function(game) {
 		this.particles[i].py += this.particles[i].sy;
 		this.particles[i].angle += this.particles[i].sr;
 
-		if (Math.random() > 0.95) {
+		if (Math.random() < this.particle_longevity) {
 			this.particles[i].frame++;
 			if (this.particles[i].frame >= this.max_frame) {
-				this.particles.splice(i, 1);
+				if (Math.random() < this.particle_respawn) {
+					this.particles[i].frame = 0;
+				} else {
+					this.particles.splice(i, 1);
+				}
 			}
 		}
 	}
@@ -227,9 +235,15 @@ ParticleEffectSystem.prototype.draw = function(ctx) {
 		// var height = this.particle_height;
 		var width = this.particle_width * ((6 - p.frame) / 4);
 		var height = this.particle_height * ((6 - p.frame) / 4);
-		ctx.drawImage(this.buffer_canvas, 
-			this.frame_width * p.frame, 0, this.frame_width, this.height,
-			0 - width / 2, 0 - height / 2, width, height);
+		if (this.fill_style !== undefined) {
+			ctx.drawImage(this.buffer_canvas, 
+				this.frame_width * p.frame, 0, this.frame_width, this.height,
+				0 - width / 2, 0 - height / 2, width, height);
+		} else {
+			ctx.drawImage(this.particle_image, 
+				this.frame_width * p.frame, 0, this.frame_width, this.height,
+				0 - width / 2, 0 - height / 2, width, height);
+		}
 
 		ctx.restore();
 	}
@@ -388,7 +402,7 @@ UFOEnemy.prototype.update = function(game) {
 	for (var i = 0; i < colliding_bullets.length; i++) {
 		this.take_damage(game, 5);
 		game.entities_to_remove.push(colliding_bullets[i]);
-		if (Math.random() < 0.3)
+		// if (Math.random() < 0.3)
 			game.particle_systems.red_particles.add_particle(colliding_bullets[i].px, colliding_bullets[i].py, 3);
 	}
 };
@@ -435,6 +449,13 @@ UFOEnemy.prototype.take_damage = function(game, damage) {
 	this.health -= damage;
 	if (this.health <= 0) {
 		game.entities_to_remove.push(this);
+
+		var count = 24 + Math.random() * 32;
+		for (var i = 0; i < count; i++) {
+			var offsetx = (Math.random() * this.width - (this.width / 2)) / 1.5;
+			var offsety = (Math.random() * this.height - (this.height / 2)) / 1.5;
+			game.particle_systems.explosion_particles.add_particle(this.px + offsetx, this.py + offsety, 2);
+		}
 	}
 };
 
@@ -838,6 +859,7 @@ function main () {
 		// enemy_bullet_overlay_effect: "enemy_bullet_overlay_effect.png",
 		purple_crystal: "purple_crystal.png",
 		particle_effect_generic: "particle_effect_generic.png",
+		particle_effect_explosion: "particle_effect_explosion.png",
 
 		platform_core: "platform_core.png",
 		platform_sections: "platform_sections.png",
@@ -902,7 +924,9 @@ function main () {
 		// game.entities.push(new UFOEnemy(game, 100,100));
 		// game.entities.push(new UFOCorsairEnemy(game, 300,100));
 		game.particle_systems.purple_particles = new ParticleEffectSystem(game, { fill_style: '#404', });
-		game.particle_systems.red_particles = new ParticleEffectSystem(game, { fill_style: '#f88', particle_size: 12, });
+		game.particle_systems.red_particles = new ParticleEffectSystem(game, { fill_style: '#f88', particle_size: 12, particle_longevity: 0.3, });
+		game.particle_systems.explosion_particles = new ParticleEffectSystem(game,
+				{ particle_size: 24, image: game.images.particle_effect_explosion, particle_longevity: 0.3, particle_respawn: 0.7 });
 
 		setInterval(step_game_frame.bind(undefined, ctx, game), 1000 / 60);
 	});
