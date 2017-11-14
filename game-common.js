@@ -38,7 +38,8 @@ function point_angle(fromx, fromy, tox, toy) {
 	return angle / Math.PI * 180;
 }
 
-function GameSystem(images) {
+function GameSystem(canvas, images) {
+	this.canvas = canvas;
 	this.images = images;
 
 	this.entities = [];
@@ -55,6 +56,9 @@ function GameSystem(images) {
 		D: false,
 		' ': false,
 	};
+	this.mouse1_state = false;
+	this.mouse_position = { px: 0, py: 0 };
+
 	document.addEventListener('keydown', (function (e) {
 		e = e || window.event;
 		e.preventDefault();
@@ -70,6 +74,28 @@ function GameSystem(images) {
 		this.keystate[charcode] = false;
 		// console.log('keyup: ', charcode);
 	}).bind(this));
+
+	var self = this;
+	this.canvas.addEventListener('mousedown', function (e) {
+		var x = e.x - this.getBoundingClientRect().left;
+		var y = e.y - this.getBoundingClientRect().top;
+		self.mouse_position = { px: x, py: y };
+		self.mouse1_state = true;
+		// console.log("mousedown: ", x, y);
+	});
+	this.canvas.addEventListener('mouseup', function (e) {
+		var x = e.x - this.getBoundingClientRect().left;
+		var y = e.y - this.getBoundingClientRect().top;
+		self.mouse_position = { px: x, py: y };
+		self.mouse1_state = false;
+		// console.log("mouseup: ", x, y);
+	});
+	this.canvas.addEventListener('mousemove', function (e) {
+		var x = e.x - this.getBoundingClientRect().left;
+		var y = e.y - this.getBoundingClientRect().top;
+		self.mouse_position = { px: x, py: y };
+		// console.log("mousemove: ", x, y);
+	});
 }
 GameSystem.prototype.step_game_frame = function(ctx) {
 	// console.log('step');

@@ -516,7 +516,7 @@ function main () {
 	load_all_images(images, function () {
 		console.log("all images loaded");
 
-		var game = new GameSystem(images);
+		var game = new GameSystem(canvas, images);
 
 		game.entities.push(new PlayerShip(game, 320, 240));
 
