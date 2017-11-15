@@ -49,6 +49,9 @@ function GameSystem(canvas, images) {
 	this.particle_systems = {};
 
 
+	this.debug_time = { game_update_time: 0, game_draw_time: 0, game_entity_draw_time: {}, };
+	this.debug_time_timer = 0;
+
 	this.keystate = {
 		W: false,
 		A: false,
@@ -98,9 +101,27 @@ function GameSystem(canvas, images) {
 	});
 }
 GameSystem.prototype.step_game_frame = function(ctx) {
+	var self = this;
 	// console.log('step');
+
+	this.debug_time_timer++;
+	if (this.debug_time_timer >= 120) {
+		this.debug_time_timer = 0;
+		// Object.keys(this.debug_time.game_entity_draw_time).forEach(function (k) { self.debug_time.game_entity_draw_time[k] /= 120; });
+		// console.log("time: ", this.debug_time.game_entity_draw_time); // DEBUG_TIME
+		// console.log("frame time; update:", this.debug_time.game_update_time / 120, "draw:", this.debug_time.game_draw_time / 120); // DEBUG_TIME
+		this.debug_time.game_update_time = 0;
+		this.debug_time.game_draw_time = 0;
+		this.debug_time.game_entity_draw_time = {};
+	}
+
+	// var start = new Date().getTime(); // DEBUG_TIME
 	this.update();
+	// this.debug_time.game_update_time += new Date().getTime() - start; // DEBUG_TIME
+	
+	// start = new Date().getTime(); // DEBUG_TIME
 	this.draw(ctx);
+	// this.debug_time.game_draw_time += new Date().getTime() - start; // DEBUG_TIME
 };
 GameSystem.prototype.update = function () {
 
@@ -131,12 +152,18 @@ GameSystem.prototype.draw = function (ctx) {
 	ctx.fillRect(0, 0, 640, 480);
 
 	for (var i = 0; i < this.entities.length; i++) {
+		// var start = new Date().getTime(); // DEBUG_TIME
 		this.entities[i].draw(ctx);
+		// this.debug_time.game_entity_draw_time[this.entities[i].class_name] = // DEBUG_TIME
+			// (this.debug_time.game_entity_draw_time[this.entities[i].class_name] || 0) + new Date().getTime() - start; // DEBUG_TIME
 	}
 
 	var keys = Object.keys(this.particle_systems);
 	for (var i = 0; i < keys.length; i++) {
+		// var start = new Date().getTime(); // DEBUG_TIME
 		this.particle_systems[keys[i]].draw(ctx);
+		// this.debug_time.game_entity_draw_time[this.particle_systems[keys[i]].class_name] = // DEBUG_TIME
+			// (this.debug_time.game_entity_draw_time[this.particle_systems[keys[i]].class_name] || 0) + new Date().getTime() - start; // DEBUG_TIME
 	}
 
 	for (var i = 0; i < this.entities.length; i++) {
@@ -164,6 +191,7 @@ function Entity(game) {
 	this.sub_entities = [];
 	this.ui_entities = [];
 }
+Entity.prototype.class_name = 'Entity';
 Entity.prototype.update = function(game) {
 	for (var i = 0; i < this.sub_entities.length; i++) {
 		this.sub_entities[i].update(game);
@@ -194,6 +222,7 @@ function ScreenEntity(game, px, py, width, height, img) {
 	this.rotation = 0;
 	this.angle_granularity = 15;
 }
+ScreenEntity.prototype.class_name = 'ScreenEntity';
 ScreenEntity.prototype = Object.create(Entity.prototype);
 ScreenEntity.prototype.draw = function(ctx) {
 	// ctx.drawImage(this.img, this.px - this.width / 2, this.py - this.height / 2, this.width, this.height);
@@ -248,6 +277,7 @@ function ParticleEffectSystem(game, config) {
 		this.prepare_buffer();
 }
 ParticleEffectSystem.prototype = Object.create(ScreenEntity.prototype);
+ParticleEffectSystem.prototype.class_name = 'ParticleEffectSystem';
 ParticleEffectSystem.prototype.prepare_buffer = function() {
 	this.buffer_canvas = document.createElement('canvas');
 	this.buffer_canvas.width = this.width;
@@ -366,6 +396,7 @@ function PathEntity(game, px, py, width, height, img, path) {
 	this.path_index = 0;
 	this.current_action = undefined;
 }
+PathEntity.prototype.class_name = 'PathEntity';
 PathEntity.prototype = Object.create(ScreenEntity.prototype);
 PathEntity.prototype.trigger_path_action = function(game) {
 	if (this.current_action.delete !== undefined) {
