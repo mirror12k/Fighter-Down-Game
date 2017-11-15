@@ -140,7 +140,7 @@ GameSystem.prototype.draw = function (ctx) {
 	}
 };
 
-GameSystem.prototype.find_colliding = function(me, type, dist) {
+GameSystem.prototype.find_near = function(me, type, dist) {
 	var found = [];
 	for (var i = 0; i < this.entities.length; i++) {
 		var ent = this.entities[i];
@@ -156,11 +156,22 @@ GameSystem.prototype.find_colliding = function(me, type, dist) {
 };
 
 
-function Entity(game) {}
-Entity.prototype.update = function(entities) {};
-Entity.prototype.draw = function(ctx) {};
+function Entity(game) {
+	this.sub_entities = [];
+}
+Entity.prototype.update = function(game) {
+	for (var i = 0; i < this.sub_entities.length; i++) {
+		this.sub_entities[i].update(game);
+	}
+};
+Entity.prototype.draw = function(ctx) {
+	for (var i = 0; i < this.sub_entities.length; i++) {
+		this.sub_entities[i].draw(ctx);
+	}
+};
 
 function ScreenEntity(game, px, py, width, height, img) {
+	Entity.call(this, game);
 	this.px = px;
 	this.py = py;
 	this.angle = 0;
@@ -183,6 +194,7 @@ ScreenEntity.prototype.draw = function(ctx) {
 		this.frame * (this.img.width / this.max_frame), 0, this.img.width / this.max_frame, this.img.height,
 		0 - this.width / 2, 0 - this.height / 2, this.width, this.height);
 
+	Entity.prototype.draw.call(this, ctx);
 	ctx.restore();
 };
 
@@ -373,6 +385,7 @@ PathEntity.prototype.trigger_path_action = function(game) {
 	}
 };
 PathEntity.prototype.update = function(game) {
+	ScreenEntity.prototype.update.call(this, game);
 	if (this.current_action === undefined) {
 		if (this.path.length > this.path_index) {
 			this.current_action = this.path[this.path_index];
