@@ -22,6 +22,7 @@ PlayerBullet.prototype = Object.create(PathEntity.prototype);
 function UFOEnemy(game, px, py, path) {
 	PathEntity.call(this, game, px, py, 64, 64, game.images.ufo, path);
 	this.health = 250;
+	this.rotation = 1;
 }
 UFOEnemy.prototype = Object.create(PathEntity.prototype);
 // UFOEnemy.prototype.draw = function(ctx) {
@@ -35,8 +36,6 @@ UFOEnemy.prototype = Object.create(PathEntity.prototype);
 // };
 UFOEnemy.prototype.update = function(game) {
 	PathEntity.prototype.update.call(this, game);
-	this.angle += 1;
-	this.angle %= 360;
 
 	var colliding_bullets = game.find_near(this, PlayerBullet, 48);
 	for (var i = 0; i < colliding_bullets.length; i++) {
@@ -134,8 +133,6 @@ function UFOPlatform(game, px, py, path) {
 UFOPlatform.prototype = Object.create(PathEntity.prototype);
 UFOPlatform.prototype.update = function(game) {
 	PathEntity.prototype.update.call(this, game);
-	this.angle += this.rotation;
-	this.angle %= 360;
 
 	if (this.firing > 0)
 		this.spawn_bullets(game);
@@ -177,7 +174,7 @@ UFOPlatform.prototype.spawn_bullets = function(game) {
 	// spawn flak bullet
 	if (Math.random() < 0.1) {
 		game.entities_to_add.push(new EnemyBullet(game, this.px, this.py, [
-			{ trail: { thickness: 0.01 }, timeout: 120, angle: target_angle, speed: 1.5 + Math.random() * 2 },
+			{ trail: { type: 'purple_particles', thickness: 0.01 }, timeout: 120, angle: target_angle, speed: 1.5 + Math.random() * 2 },
 			{ spawn: spawn_burst, delete: true },
 		], game.images.purple_square_bullet));
 	}
@@ -276,11 +273,7 @@ function UFOStationRing(game, px, py, rotation, pylon_distance) {
 	}
 }
 UFOStationRing.prototype = Object.create(ScreenEntity.prototype);
-UFOStationRing.prototype.update = function(game) {
-	ScreenEntity.prototype.update.call(this, game);
-	this.angle += this.rotation;
-	this.angle %= 360;
-};
+
 
 
 function UFOStationPylon(game, px, py) {
@@ -292,21 +285,9 @@ UFOStationPylon.prototype = Object.create(ScreenEntity.prototype);
 function RotatingCrystalEntity(game, px, py) {
 	ScreenEntity.call(this, game, px, py, 16, 16, game.images.purple_crystal);
 	this.angle = 0;
+	this.rotation = 1;
 }
 RotatingCrystalEntity.prototype = Object.create(ScreenEntity.prototype);
-RotatingCrystalEntity.prototype.update = function(game) {
-	this.angle += 1;
-	this.angle %= 360;
-};
-// RotatingCrystalEntity.prototype.draw = function(ctx) {
-// 	ctx.save();
-
-// 	ctx.translate(this.px, this.py);
-// 	ctx.rotate(Math.PI * (Math.floor(this.angle / 15) * 15) / 180);
-// 	ctx.drawImage(this.img, 0 - this.width / 2, 0 - this.height / 2, this.width, this.height);
-
-// 	ctx.restore();
-// };
 
 function UFOCorsairEnemy(game, px, py, path) {
 	PathEntity.call(this, game, px, py, 128, 64, game.images.ufo_corsair, path);
@@ -350,16 +331,22 @@ UFOCorsairEnemy.prototype.fire = function(game) {
 		game.entities_to_add.push(new EnemyBullet(game, this.px + offset.px, this.py + offset.py, [
 			{
 				timeout: 20, repeat: 8,
-				spawn: [{ img: game.images.bright_purple_square_bullet, path: [{timeout: 90, trail: { thickness: 0.01 }, }, {delete: true}] }],
-				trail: { thickness: 0.03 }, angle: this.angle, speed: 3, da: da
+				spawn: [{
+					img: game.images.bright_purple_square_bullet,
+					path: [{timeout: 90, trail: { type: 'purple_particles', thickness: 0.01 }, }, {delete: true}],
+				}],
+				trail: { type: 'purple_particles', thickness: 0.03 }, angle: this.angle, speed: 3, da: da
 			},
 			{ delete: true },
 		], game.images.purple_square_bullet));
 		game.entities_to_add.push(new EnemyBullet(game, this.px + offset.px, this.py + offset.py, [
 			{
 				timeout: 20, repeat: 8,
-				spawn: [{ img: game.images.bright_purple_square_bullet, path: [{timeout: 90, trail: { thickness: 0.01 }, }, {delete: true}] }],
-				trail: { thickness: 0.03 }, angle: this.angle, speed: 3, da: -da
+				spawn: [{
+					img: game.images.bright_purple_square_bullet,
+					path: [{timeout: 90, trail: { type: 'purple_particles', thickness: 0.01 }, }, {delete: true}],
+				}],
+				trail: { type: 'purple_particles', thickness: 0.03 }, angle: this.angle, speed: 3, da: -da
 			},
 			{ delete: true },
 		], game.images.purple_square_bullet));

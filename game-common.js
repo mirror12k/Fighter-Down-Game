@@ -181,6 +181,7 @@ function ScreenEntity(game, px, py, width, height, img) {
 	this.height = height;
 	this.img = img;
 
+	this.rotation = 0;
 	this.angle_granularity = 15;
 }
 ScreenEntity.prototype = Object.create(Entity.prototype);
@@ -196,6 +197,13 @@ ScreenEntity.prototype.draw = function(ctx) {
 
 	Entity.prototype.draw.call(this, ctx);
 	ctx.restore();
+};
+ScreenEntity.prototype.update = function(game) {
+	Entity.prototype.update.call(this, game);
+	if (this.rotation) {
+		this.angle += this.rotation;
+		this.angle %= 360;
+	}
 };
 
 
@@ -347,24 +355,41 @@ PathEntity.prototype.trigger_path_action = function(game) {
 	}
 
 	if (this.current_action.px !== undefined) {
-		this.current_action.sx = (this.current_action.px - this.px) / this.current_action.timeout;
-		this.current_action.sy = (this.current_action.py - this.py) / this.current_action.timeout;
+		if (this.current_action.timeout !== undefined) {
+			this.current_action.sx = (this.current_action.px - this.px) / this.current_action.timeout;
+			this.current_action.sy = (this.current_action.py - this.py) / this.current_action.timeout;
+			this.timer = this.current_action.timeout;
+		} else {
+			var dist = ((this.current_action.px - this.px) ** 2 + (this.current_action.py - this.py) ** 2) ** 0.5;
+			var normalx = (this.current_action.px - this.px) / dist;
+			var normaly = (this.current_action.py - this.py) / dist;
+			this.current_action.sx = normalx * this.current_action.speed;
+			this.current_action.sy = normaly * this.current_action.speed;
+			this.timer = dist / this.current_action.speed;
+		}
+	} else {
+		if (this.current_action.angle !== undefined) {
+			this.angle = this.current_action.angle;
+			if (this.current_action.speed !== undefined) {
+				this.current_action.sx = Math.cos(this.current_action.angle / 180 * Math.PI) * this.current_action.speed;
+				this.current_action.sy = Math.sin(this.current_action.angle / 180 * Math.PI) * this.current_action.speed;
+			}
+		}
+
+		if (this.current_action.timeout !== undefined) {
+			this.timer = this.current_action.timeout;
+		} else {
+			this.timer = undefined;
+		}
 	}
 
-	if (this.current_action.sx == undefined)
+
+	if (this.current_action.sx === undefined)
 		this.current_action.sx = 0;
-	if (this.current_action.sy == undefined)
+	if (this.current_action.sy === undefined)
 		this.current_action.sy = 0;
 
-	if (this.current_action.angle !== undefined) {
-		this.current_action.sx = Math.cos(this.current_action.angle / 180 * Math.PI) * this.current_action.speed;
-		this.current_action.sy = Math.sin(this.current_action.angle / 180 * Math.PI) * this.current_action.speed;
-		this.angle = this.current_action.angle;
-	}
 
-	if (this.current_action.timeout) {
-		this.timer = this.current_action.timeout;
-	}
 
 	if (this.current_action.spawn) {
 		for (var i = 0; i < this.current_action.spawn.length; i++) {
@@ -381,6 +406,16 @@ PathEntity.prototype.trigger_path_action = function(game) {
 			args = args.slice(0);
 			args.unshift(game);
 			this[this.current_action.call[i].method].apply(this, args);
+		}
+	}
+
+	if (this.current_action.call_system) {
+		for (var i = 0; i < this.current_action.call_system.length; i++) {
+			var args = this.current_action.call_system[i].args || [];
+			args = args.slice(0);
+			args.unshift(game);
+			game[this.current_action.call_system[i].system][this.current_action.call_system[i].method].apply(
+					game[this.current_action.call_system[i].system], args);
 		}
 	}
 };
@@ -407,14 +442,14 @@ PathEntity.prototype.update = function(game) {
 
 		if (this.current_action.trail) {
 			if (Math.random() < this.current_action.trail.thickness) {
-				game.particle_systems.purple_particles.add_particle(this.px, this.py, 2);
+				game.particle_systems[this.current_action.trail.type].add_particle(this.px, this.py, 2);
 			}
 		}
 
 		this.px += this.current_action.sx;
 		this.py += this.current_action.sy;
 
-		if (this.current_action.timeout !== undefined) {
+		if (this.timer !== undefined) {
 			this.timer--;
 			if (this.timer <= 0) {
 				if (this.current_action.repeat !== undefined && this.current_action.repeat > 1) {
