@@ -356,8 +356,11 @@ UFOCorsairEnemy.prototype.fire = function(game) {
 
 
 function PlayerShip(game, px, py) {
-	PathEntity.call(this, game, px, py, 64, 64, game.images.fighter);
+	PathEntity.call(this, game, px, py, 64, 64, game.images.fighter_transform_animation);
+	this.max_frame = 8;
 	// this.angle = 0;
+
+	this.transformation_step = 0;
 
 	this.tilt_angle = 0;
 	this.fire_timer = 0;
@@ -369,36 +372,67 @@ PlayerShip.prototype = Object.create(ScreenEntity.prototype);
 PlayerShip.prototype.update = function(game) {
 	ScreenEntity.prototype.update.call(this, game);
 
+	if (game.keystate.shift) {
+		if (this.transformation_step < 14) {
+			this.transformation_step++;
+		}
+	} else {
+		if (this.transformation_step > 0) {
+			this.transformation_step--;
+		}
+	}
+	this.frame = Math.floor(this.transformation_step / 2);
+	this.speed = 6 - this.transformation_step / 4;
+
 	if (game.keystate.A) {
 		this.px -= this.speed;
-		if (this.tilt_angle > 0) {
-			this.tilt_angle -= 9;
-		} else if (this.tilt_angle > -30) {
-			this.tilt_angle -= 3;
+		if (this.px < 0) {
+			this.px = 0;
 		}
-		this.width = 64 - Math.abs(this.tilt_angle / 30 * 10);
+
+		if (this.transformation_step === 0) {
+			if (this.tilt_angle > 0) {
+				this.tilt_angle -= 9;
+			} else if (this.tilt_angle > -30) {
+				this.tilt_angle -= 3;
+			}
+			this.width = 64 - Math.abs(this.tilt_angle / 30 * 10);
+		}
 	} else if (game.keystate.D) {
 		this.px += this.speed;
-		if (this.tilt_angle < 0) {
-			this.tilt_angle += 9;
-		} else if (this.tilt_angle < 30) {
-			this.tilt_angle += 3;
+		if (this.px >= 640) {
+			this.px = 640 - 1;
 		}
-		this.width = 64 - Math.abs(this.tilt_angle / 30 * 10);
+		if (this.transformation_step === 0) {
+			if (this.tilt_angle < 0) {
+				this.tilt_angle += 9;
+			} else if (this.tilt_angle < 30) {
+				this.tilt_angle += 3;
+			}
+			this.width = 64 - Math.abs(this.tilt_angle / 30 * 10);
+		}
 	} else {
-		if (this.tilt_angle < 0) {
-			this.tilt_angle += 3;
-		} else if (this.tilt_angle > 0) {
-			this.tilt_angle -= 3;
+		if (this.transformation_step === 0) {
+			if (this.tilt_angle < 0) {
+				this.tilt_angle += 3;
+			} else if (this.tilt_angle > 0) {
+				this.tilt_angle -= 3;
+			}
+			this.width = 64 - Math.abs(this.tilt_angle / 30 * 10);
 		}
-		this.width = 64 - Math.abs(this.tilt_angle / 30 * 10);
 	}
 	this.angle = this.tilt_angle;
 
 	if (game.keystate.W) {
 		this.py -= this.speed;
+		if (this.py < 0) {
+			this.py = 0;
+		}
 	} else if (game.keystate.S) {
 		this.py += this.speed;
+		if (this.py >= 480) {
+			this.py = 480 - 1;
+		}
 	}
 
 	if (this.fire_timer) {
@@ -441,6 +475,16 @@ PlayerShip.prototype.update = function(game) {
 // 	ctx.restore();
 // };
 PlayerShip.prototype.fire = function(game) {
+	if (this.transformation_step >= 12) {
+		var offset = d2_point_offset(this.tilt_angle, -this.width / 3, -this.height / 2);
+		game.entities_to_add.push(new PlayerBullet(game, this.px + offset.px, this.py + offset.py, [
+			{ timeout: 40, angle: this.tilt_angle - 90, speed: 16 },
+		], game.images.red_streak_bullet));
+		offset = d2_point_offset(this.tilt_angle, this.width / 3, -this.height / 2);
+		game.entities_to_add.push(new PlayerBullet(game, this.px + offset.px, this.py + offset.py, [
+			{ timeout: 40, angle: this.tilt_angle - 90, speed: 16 },
+		], game.images.red_streak_bullet));
+	}
 	var offset = d2_point_offset(this.tilt_angle, -this.width / 8, -this.height / 2);
 	game.entities_to_add.push(new PlayerBullet(game, this.px + offset.px, this.py + offset.py, [
 		{ timeout: 40, angle: this.tilt_angle - 90, speed: 16 },

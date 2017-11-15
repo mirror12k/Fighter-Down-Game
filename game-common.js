@@ -58,6 +58,9 @@ function GameSystem(canvas, images) {
 		S: false,
 		D: false,
 		' ': false,
+		shift: false,
+		ctrl: false,
+		alt: false,
 	};
 	this.mouse1_state = false;
 	this.mouse_position = { px: 0, py: 0 };
@@ -67,6 +70,9 @@ function GameSystem(canvas, images) {
 		e.preventDefault();
 		var charcode = String.fromCharCode(e.keyCode);
 		this.keystate[charcode] = true;
+		this.keystate.shift = !!e.shiftKey;
+		this.keystate.ctrl = !!e.ctrlKey;
+		this.keystate.alt = !!e.altKey;
 		// console.log('keydown: ', charcode);
 	}).bind(this));
 
@@ -75,6 +81,9 @@ function GameSystem(canvas, images) {
 		e.preventDefault();
 		var charcode = String.fromCharCode(e.keyCode);
 		this.keystate[charcode] = false;
+		this.keystate.shift = !!e.shiftKey;
+		this.keystate.ctrl = !!e.ctrlKey;
+		this.keystate.alt = !!e.altKey;
 		// console.log('keyup: ', charcode);
 	}).bind(this));
 
