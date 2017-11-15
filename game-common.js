@@ -138,6 +138,10 @@ GameSystem.prototype.draw = function (ctx) {
 	for (var i = 0; i < keys.length; i++) {
 		this.particle_systems[keys[i]].draw(ctx);
 	}
+
+	for (var i = 0; i < this.entities.length; i++) {
+		this.entities[i].draw_ui(ctx);
+	}
 };
 
 GameSystem.prototype.find_near = function(me, type, dist) {
@@ -158,6 +162,7 @@ GameSystem.prototype.find_near = function(me, type, dist) {
 
 function Entity(game) {
 	this.sub_entities = [];
+	this.ui_entities = [];
 }
 Entity.prototype.update = function(game) {
 	for (var i = 0; i < this.sub_entities.length; i++) {
@@ -167,6 +172,11 @@ Entity.prototype.update = function(game) {
 Entity.prototype.draw = function(ctx) {
 	for (var i = 0; i < this.sub_entities.length; i++) {
 		this.sub_entities[i].draw(ctx);
+	}
+};
+Entity.prototype.draw_ui = function(ctx) {
+	for (var i = 0; i < this.ui_entities.length; i++) {
+		this.ui_entities[i].draw(ctx);
 	}
 };
 
@@ -205,12 +215,20 @@ ScreenEntity.prototype.update = function(game) {
 		this.angle %= 360;
 	}
 };
+Entity.prototype.draw_ui = function(ctx) {
+	ctx.save();
+	ctx.translate(this.px, this.py);
+	for (var i = 0; i < this.ui_entities.length; i++) {
+		this.ui_entities[i].draw(ctx);
+	}
+	ctx.restore();
+};
 
 
 
 function ParticleEffectSystem(game, config) {
 	this.fill_style = config.fill_style;
-	this.particle_image = config.image || game.images.particle_effect_generic;
+	this.particle_image = config.particle_image || game.images.particle_effect_generic;
 
 	this.particles = [];
 

@@ -548,7 +548,7 @@ function main () {
 					particle_longevity: 0.01, 
 				});
 		game.particle_systems.explosion_particles = new ParticleEffectSystem(game,
-				{ particle_size: 32, image: game.images.particle_effect_explosion, particle_longevity: 0.3, particle_respawn: 0.2 });
+				{ particle_size: 32, particle_image: game.images.particle_effect_explosion, particle_longevity: 0.3, particle_respawn: 0.2 });
 
 		setInterval(game.step_game_frame.bind(game, ctx), 1000 / 60);
 	});
