@@ -231,8 +231,8 @@ function ScreenEntity(game, px, py, width, height, img) {
 	this.rotation = 0;
 	this.angle_granularity = 15;
 }
-ScreenEntity.prototype.class_name = 'ScreenEntity';
 ScreenEntity.prototype = Object.create(Entity.prototype);
+ScreenEntity.prototype.class_name = 'ScreenEntity';
 ScreenEntity.prototype.draw = function(ctx) {
 	// ctx.drawImage(this.img, this.px - this.width / 2, this.py - this.height / 2, this.width, this.height);
 	ctx.save();
@@ -405,8 +405,8 @@ function PathEntity(game, px, py, width, height, img, path) {
 	this.path_index = 0;
 	this.current_action = undefined;
 }
-PathEntity.prototype.class_name = 'PathEntity';
 PathEntity.prototype = Object.create(ScreenEntity.prototype);
+PathEntity.prototype.class_name = 'PathEntity';
 PathEntity.prototype.trigger_path_action = function(game) {
 	if (this.current_action.delete !== undefined) {
 		game.entities_to_remove.push(this);
@@ -479,7 +479,9 @@ PathEntity.prototype.trigger_path_action = function(game) {
 };
 PathEntity.prototype.update = function(game) {
 	ScreenEntity.prototype.update.call(this, game);
-	if (this.current_action === undefined) {
+	if (this.path === undefined) {
+		// do nothing
+	} else if (this.current_action === undefined) {
 		if (this.path.length > this.path_index) {
 			this.current_action = this.path[this.path_index];
 			this.path_index++;

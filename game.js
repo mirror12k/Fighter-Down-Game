@@ -8,6 +8,7 @@ function EnemyBullet(game, px, py, path, img) {
 	this.angle_granularity = 5;
 }
 EnemyBullet.prototype = Object.create(PathEntity.prototype);
+EnemyBullet.prototype.collision_radius = 6;
 
 function PlayerBullet(game, px, py, path, img) {
 	img = img || game.images.orange_round_bullet;
@@ -16,15 +17,88 @@ function PlayerBullet(game, px, py, path, img) {
 	this.angle_granularity = 5;
 }
 PlayerBullet.prototype = Object.create(PathEntity.prototype);
+PlayerBullet.prototype.collision_radius = 5;
 
+
+
+function CollidingEntity(game, px, py, width, height, image, path) {
+	PathEntity.call(this, game, px, py, width, height, image, path);
+}
+CollidingEntity.prototype = Object.create(PathEntity.prototype);
+CollidingEntity.prototype.class_name = 'CollidingEntity';
+CollidingEntity.prototype.collision_radius = 10;
+CollidingEntity.prototype.collision_map = [];
+
+CollidingEntity.prototype.update = function(game) {
+	PathEntity.prototype.update.call(this, game);
+
+	for (var i = 0; i < this.collision_map.length; i++) {
+		// console.log("debug: ", this.collision_radius + this.collision_map[i].class.prototype.collision_radius);
+		var colliding = game.find_near(this, this.collision_map[i].class, this.collision_radius + this.collision_map[i].class.prototype.collision_radius);
+		for (var k = 0; k < colliding.length; k++) {
+			this[this.collision_map[i].callback](game, colliding[k]);
+		}
+	}
+};
+
+
+function EnemyEntity(game, px, py, width, height, image, path) {
+	CollidingEntity.call(this, game, px, py, width, height, image, path);
+	this.health = 250;
+	this.armor = 0;
+}
+EnemyEntity.prototype = Object.create(CollidingEntity.prototype);
+EnemyEntity.prototype.collision_map = [
+	{
+		class: PlayerBullet,
+		callback: 'hit_bullet',
+	},
+];
+
+// EnemyEntity.prototype.update = function(game) {
+// 	PathEntity.prototype.update.call(this, game);
+
+// 	var colliding_bullets = game.find_near(this, PlayerBullet, this.collision_radius);
+// 	for (var i = 0; i < colliding_bullets.length; i++) {
+// 		this.take_damage(game, 5);
+// 		game.entities_to_remove.push(colliding_bullets[i]);
+// 		// if (Math.random() < 0.3)
+// 			game.particle_systems.red_particles.add_particle(colliding_bullets[i].px, colliding_bullets[i].py, 3);
+// 	}
+// };
+EnemyEntity.prototype.hit_bullet = function(game, bullet) {
+	this.take_damage(game, 5);
+	game.entities_to_remove.push(bullet);
+	game.particle_systems.red_particles.add_particle(bullet.px, bullet.py, 3);
+};
+EnemyEntity.prototype.take_damage = function(game, damage) {
+	this.health -= damage - (damage * this.armor);
+	if (this.health <= 0) {
+		this.on_death(game);
+		game.entities_to_remove.push(this);
+	}
+};
+EnemyEntity.prototype.on_death = function(game) {
+	var count = 24 + Math.random() * 32;
+	for (var i = 0; i < count; i++) {
+		var offsetx = (Math.random() * this.width - (this.width / 2)) / 1.5;
+		var offsety = (Math.random() * this.height - (this.height / 2)) / 1.5;
+		game.particle_systems.explosion_particles.add_particle(this.px + offsetx, this.py + offsety, 2);
+	}
+	var count = Math.floor(1 + Math.random() * 2);
+	for (var i = 0; i < count; i++) {
+		game.particle_systems.ship_chunks.add_image_particle(this.img, this.width, this.height, this.px, this.py, 3);
+	}
+};
 
 
 function UFOEnemy(game, px, py, path) {
-	PathEntity.call(this, game, px, py, 64, 64, game.images.ufo, path);
+	EnemyEntity.call(this, game, px, py, 64, 64, game.images.ufo, path);
 	this.health = 250;
 	this.rotation = 1;
 }
-UFOEnemy.prototype = Object.create(PathEntity.prototype);
+UFOEnemy.prototype = Object.create(EnemyEntity.prototype);
+UFOEnemy.prototype.collision_radius = 32;
 // UFOEnemy.prototype.draw = function(ctx) {
 // 	ctx.save();
 
@@ -34,17 +108,17 @@ UFOEnemy.prototype = Object.create(PathEntity.prototype);
 
 // 	ctx.restore();
 // };
-UFOEnemy.prototype.update = function(game) {
-	PathEntity.prototype.update.call(this, game);
+// UFOEnemy.prototype.update = function(game) {
+// 	PathEntity.prototype.update.call(this, game);
 
-	var colliding_bullets = game.find_near(this, PlayerBullet, 48);
-	for (var i = 0; i < colliding_bullets.length; i++) {
-		this.take_damage(game, 5);
-		game.entities_to_remove.push(colliding_bullets[i]);
-		// if (Math.random() < 0.3)
-			game.particle_systems.red_particles.add_particle(colliding_bullets[i].px, colliding_bullets[i].py, 3);
-	}
-};
+// 	var colliding_bullets = game.find_near(this, PlayerBullet, 48);
+// 	for (var i = 0; i < colliding_bullets.length; i++) {
+// 		this.take_damage(game, 5);
+// 		game.entities_to_remove.push(colliding_bullets[i]);
+// 		// if (Math.random() < 0.3)
+// 			game.particle_systems.red_particles.add_particle(colliding_bullets[i].px, colliding_bullets[i].py, 3);
+// 	}
+// };
 
 UFOEnemy.prototype.fire = function(game, tx, ty) {
 	// var target_angle = point_angle(this.px, this.py, tx, ty);
@@ -81,24 +155,6 @@ UFOEnemy.prototype.fire = function(game, tx, ty) {
 			{ delete: true, },
 		];
 		game.entities_to_add.push(new EnemyBullet(game, this.px, this.py, path));
-	}
-};
-
-UFOEnemy.prototype.take_damage = function(game, damage) {
-	this.health -= damage;
-	if (this.health <= 0) {
-		game.entities_to_remove.push(this);
-
-		var count = 24 + Math.random() * 32;
-		for (var i = 0; i < count; i++) {
-			var offsetx = (Math.random() * this.width - (this.width / 2)) / 1.5;
-			var offsety = (Math.random() * this.height - (this.height / 2)) / 1.5;
-			game.particle_systems.explosion_particles.add_particle(this.px + offsetx, this.py + offsety, 2);
-		}
-		var count = Math.floor(1 + Math.random() * 2);
-		for (var i = 0; i < count; i++) {
-			game.particle_systems.ship_chunks.add_image_particle(this.img, this.width, this.height, this.px, this.py, 3);
-		}
 	}
 };
 
@@ -190,12 +246,14 @@ UFOPlatform.prototype.fire = function(game, tx, ty) {
 
 
 function Asteroid(game, px, py, size, path) {
-	PathEntity.call(this, game, px, py, Math.floor(size * 64), Math.floor(size * 64), game.images.asteroid_64, path);
+	EnemyEntity.call(this, game, px, py, Math.floor(size * 64), Math.floor(size * 64), game.images.asteroid_64, path);
+	this.health = 100;
 	this.size = Math.floor(size * 64);
 	this.angle = Math.random() * 360;
 	this.rotation = Math.random() * 2 - 1;
 }
-Asteroid.prototype = Object.create(PathEntity.prototype);
+Asteroid.prototype = Object.create(EnemyEntity.prototype);
+Asteroid.prototype.collision_radius = 32;
 
 
 
@@ -366,7 +424,7 @@ UFOCorsairEnemy.prototype.fire = function(game) {
 
 
 function PlayerShip(game, px, py) {
-	PathEntity.call(this, game, px, py, 64, 64, game.images.fighter_transform_animation);
+	CollidingEntity.call(this, game, px, py, 64, 64, game.images.fighter_transform_animation);
 	this.max_frame = 8;
 	// this.angle = 0;
 
@@ -378,9 +436,16 @@ function PlayerShip(game, px, py) {
 
 	this.angle_granularity = 3;
 }
-PlayerShip.prototype = Object.create(ScreenEntity.prototype);
+PlayerShip.prototype = Object.create(CollidingEntity.prototype);
+PlayerShip.prototype.collision_radius = 16;
+PlayerShip.prototype.collision_map = [
+	{
+		class: EnemyBullet,
+		callback: 'hit_bullet',
+	}
+];
 PlayerShip.prototype.update = function(game) {
-	ScreenEntity.prototype.update.call(this, game);
+	CollidingEntity.prototype.update.call(this, game);
 
 	if (game.keystate.shift) {
 		if (this.transformation_step < 14) {
@@ -454,36 +519,16 @@ PlayerShip.prototype.update = function(game) {
 		}
 	}
 
-	var colliding_bullets = game.find_near(this, EnemyBullet, 24);
-	if (colliding_bullets.length > 0) {
-		for (var i = 0; i < colliding_bullets.length; i++) {
-			game.entities_to_remove.push(colliding_bullets[i]);
-		}
-	}
-
 
 	// this.fire_timer--;
 	// if (this.fire_timer <= 0) {
 	// 	this.fire(game);
 	// 	this.fire_timer = 30 * 5;
 	// }
-
-	// if (Math.random() > 0.8) {
-	// 	var offset = point_offset(this.angle, 32);
-	// 	game.particle_systems.purple_particles.add_particle(this.px + offset.px, this.py + offset.py, 2)
-	// }
 };
-// PlayerShip.prototype.draw = function(ctx) {
-// 	ctx.save();
-
-// 	ctx.translate(this.px, this.py);
-// 	ctx.rotate(Math.PI * (Math.floor(this.angle / 15) * 15) / 180);
-// 	ctx.drawImage(this.img, 0 - this.width / 2, 0 - this.height / 2, this.width, this.height);
-
-// 	this.crystal_ent.draw(ctx);
-
-// 	ctx.restore();
-// };
+PlayerShip.prototype.hit_bullet = function(game, bullet) {
+	game.entities_to_remove.push(bullet);
+};
 PlayerShip.prototype.fire = function(game) {
 	if (this.transformation_step >= 12) {
 		var offset = d2_point_offset(this.tilt_angle, -this.width / 3, -this.height / 2);
