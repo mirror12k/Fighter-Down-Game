@@ -189,6 +189,16 @@ UFOPlatform.prototype.fire = function(game, tx, ty) {
 
 
 
+function Asteroid(game, px, py, size, path) {
+	PathEntity.call(this, game, px, py, Math.floor(size * 64), Math.floor(size * 64), game.images.asteroid_64, path);
+	this.size = Math.floor(size * 64);
+	this.angle = Math.random() * 360;
+	this.rotation = Math.random() * 2 - 1;
+}
+Asteroid.prototype = Object.create(PathEntity.prototype);
+
+
+
 function UFOStation(game, px, py, path) {
 	PathEntity.call(this, game, px, py, 64, 64, game.images.ufo_station_core, path);
 
@@ -478,11 +488,11 @@ PlayerShip.prototype.fire = function(game) {
 	if (this.transformation_step >= 12) {
 		var offset = d2_point_offset(this.tilt_angle, -this.width / 3, -this.height / 2);
 		game.entities_to_add.push(new PlayerBullet(game, this.px + offset.px, this.py + offset.py, [
-			{ timeout: 40, angle: this.tilt_angle - 90, speed: 16 },
+			{ timeout: 40, angle: this.tilt_angle - 90 - 15, speed: 16 },
 		], game.images.red_streak_bullet));
 		offset = d2_point_offset(this.tilt_angle, this.width / 3, -this.height / 2);
 		game.entities_to_add.push(new PlayerBullet(game, this.px + offset.px, this.py + offset.py, [
-			{ timeout: 40, angle: this.tilt_angle - 90, speed: 16 },
+			{ timeout: 40, angle: this.tilt_angle - 90 + 15, speed: 16 },
 		], game.images.red_streak_bullet));
 	}
 	var offset = d2_point_offset(this.tilt_angle, -this.width / 8, -this.height / 2);
@@ -522,6 +532,8 @@ function main () {
 		particle_effect_generic: "particle_effect_generic.png",
 		particle_effect_explosion: "particle_effect_explosion.png",
 
+		asteroid_64: "asteroid_64.png",
+
 		platform_core: "platform_core.png",
 		platform_sections: "platform_sections.png",
 
@@ -551,6 +563,12 @@ function main () {
 			{ timeout: 640, sx: -1 },
 			{ timeout: 640, sx: 1 },
 		]));
+
+		for (var i = 0; i < 8; i++) {
+			game.entities.push(new Asteroid(game, Math.random() * (640 + 200) - 100, -100 - Math.random() * 200, 1, [
+				{ px: Math.random() * (640 + 200) - 100, py: 800, speed: 1.5 },
+			]));
+		}
 
 		// game.entities.push(new UFOEnemy(game, 100,100, [
 		// 	{ timeout: 120, sy: 1 },
