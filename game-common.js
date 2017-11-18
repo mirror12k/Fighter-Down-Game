@@ -201,6 +201,7 @@ function Entity(game) {
 	this.ui_entities = [];
 }
 Entity.prototype.class_name = 'Entity';
+Entity.prototype.z_index = 0;
 Entity.prototype.update = function(game) {
 	for (var i = 0; i < this.sub_entities.length; i++) {
 		this.sub_entities[i].update(game);
@@ -239,11 +240,21 @@ ScreenEntity.prototype.draw = function(ctx) {
 
 	ctx.translate(this.px, this.py);
 	ctx.rotate(Math.PI * (Math.floor(this.angle / this.angle_granularity) * this.angle_granularity) / 180);
+
+	for (var i = 0; i < this.sub_entities.length; i++) {
+		if (this.sub_entities[i].z_index < this.z_index)
+			this.sub_entities[i].draw(ctx);
+	}
+
 	ctx.drawImage(this.img,
 		this.frame * (this.img.width / this.max_frame), 0, this.img.width / this.max_frame, this.img.height,
 		0 - this.width / 2, 0 - this.height / 2, this.width, this.height);
 
-	Entity.prototype.draw.call(this, ctx);
+	for (var i = 0; i < this.sub_entities.length; i++) {
+		if (this.sub_entities[i].z_index >= this.z_index)
+			this.sub_entities[i].draw(ctx);
+	}
+
 	ctx.restore();
 };
 ScreenEntity.prototype.update = function(game) {

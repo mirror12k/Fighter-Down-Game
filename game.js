@@ -170,17 +170,20 @@ function UFOPlatformSection(game, px, py) {
 	// this.angle = Math.random() * 360;
 }
 UFOPlatformSection.prototype = Object.create(ScreenEntity.prototype);
+UFOPlatformSection.prototype.z_index = -1;
 
 function UFOPlatform(game, px, py, path) {
 	PathEntity.call(this, game, px, py, 64, 64, game.images.platform_core, path);
 
-	this.sections = [];
+	// this.sections = [];
 
 	var section_count = Math.floor(Math.random() * 3) + 3;
 
 	for (var i = 0; i < section_count; i++) {
 		var offset = point_offset(i * (360 / section_count) + Math.random() * (360 / section_count), 48);
-		this.sections.push(new UFOPlatformSection(game, offset.px, offset.py));
+
+		this.sub_entities.push(new UFOPlatformSection(game, offset.px, offset.py));
+		// this.sections.push(new UFOPlatformSection(game, offset.px, offset.py));
 	}
 
 	this.rotation = 0.25 * (Math.floor(Math.random() * 5) - 2);
@@ -193,21 +196,21 @@ UFOPlatform.prototype.update = function(game) {
 	if (this.firing > 0)
 		this.spawn_bullets(game);
 };
-UFOPlatform.prototype.draw = function(ctx) {
-	ctx.save();
+// UFOPlatform.prototype.draw = function(ctx) {
+// 	ctx.save();
 
-	ctx.translate(this.px, this.py);
-	ctx.rotate(Math.PI * (Math.floor(this.angle / 15) * 15) / 180);
+// 	ctx.translate(this.px, this.py);
+// 	ctx.rotate(Math.PI * (Math.floor(this.angle / 15) * 15) / 180);
 
-	for (var i = 0; i < this.sections.length; i++) {
-		this.sections[i].draw(ctx);
-	}
-	ctx.drawImage(this.img,
-		this.frame * this.width, 0, this.img.width, this.img.height,
-		0 - this.width / 2, 0 - this.height / 2, this.width, this.height);
+// 	for (var i = 0; i < this.sections.length; i++) {
+// 		this.sections[i].draw(ctx);
+// 	}
+// 	ctx.drawImage(this.img,
+// 		this.frame * this.width, 0, this.img.width, this.img.height,
+// 		0 - this.width / 2, 0 - this.height / 2, this.width, this.height);
 
-	ctx.restore();
-};
+// 	ctx.restore();
+// };
 
 UFOPlatform.prototype.spawn_bullets = function(game) {
 	this.firing--;
@@ -269,20 +272,20 @@ UFOStation.prototype.update = function(game) {
 	if (this.firing > 0)
 		this.spawn_bullets(game);
 };
-UFOStation.prototype.draw = function(ctx) {	ctx.save();
-	ctx.save();
+// UFOStation.prototype.draw = function(ctx) {	ctx.save();
+// 	ctx.save();
 
 	
-	ctx.translate(this.px, this.py);
-	ctx.rotate(Math.PI * (Math.floor(this.angle / this.angle_granularity) * this.angle_granularity) / 180);
-	Entity.prototype.draw.call(this, ctx);
+// 	ctx.translate(this.px, this.py);
+// 	ctx.rotate(Math.PI * (Math.floor(this.angle / this.angle_granularity) * this.angle_granularity) / 180);
+// 	Entity.prototype.draw.call(this, ctx);
 
-	ctx.drawImage(this.img,
-		this.frame * (this.img.width / this.max_frame), 0, this.img.width / this.max_frame, this.img.height,
-		0 - this.width / 2, 0 - this.height / 2, this.width, this.height);
+// 	ctx.drawImage(this.img,
+// 		this.frame * (this.img.width / this.max_frame), 0, this.img.width / this.max_frame, this.img.height,
+// 		0 - this.width / 2, 0 - this.height / 2, this.width, this.height);
 
-	ctx.restore();
-};
+// 	ctx.restore();
+// };
 
 UFOStation.prototype.spawn_bullets = function(game) {
 	// spread triangle fire
@@ -341,6 +344,7 @@ function UFOStationRing(game, px, py, rotation, pylon_distance) {
 	}
 }
 UFOStationRing.prototype = Object.create(ScreenEntity.prototype);
+UFOStationRing.prototype.z_index = -1;
 
 
 
@@ -632,11 +636,11 @@ function main () {
 		// 	{ timeout: 360, angle: 180, speed: 0.75, call: [{ method: 'fire' }] },
 		// ]));
 
-		// game.entities.push(new UFOPlatform(game, 500,-400, [
-		// 	{ timeout: 1000, sy: 0.5 },
-		// 	{ timeout: 120, repeat: 4, call: [{ method: 'fire', args: [300, 300] }] },
-		// 	{ timeout: 360, sy: 0.5, sx: 0.5 },
-		// ]));
+		game.entities.push(new UFOPlatform(game, 500,-400, [
+			{ timeout: 1000, sy: 0.5 },
+			{ timeout: 120, repeat: 4, call: [{ method: 'fire', args: [300, 300] }] },
+			{ timeout: 360, sy: 0.5, sx: 0.5 },
+		]));
 
 
 		// game.entities.push(new EnemyBullet(game, 8,8, []));
