@@ -21,25 +21,6 @@ PlayerBullet.prototype.collision_radius = 5;
 
 
 
-function CollidingEntity(game, px, py, width, height, image, path) {
-	PathEntity.call(this, game, px, py, width, height, image, path);
-}
-CollidingEntity.prototype = Object.create(PathEntity.prototype);
-CollidingEntity.prototype.class_name = 'CollidingEntity';
-CollidingEntity.prototype.collision_radius = 10;
-CollidingEntity.prototype.collision_map = [];
-
-CollidingEntity.prototype.update = function(game) {
-	PathEntity.prototype.update.call(this, game);
-
-	for (var i = 0; i < this.collision_map.length; i++) {
-		// console.log("debug: ", this.collision_radius + this.collision_map[i].class.prototype.collision_radius);
-		var colliding = game.find_near(this, this.collision_map[i].class, this.collision_radius + this.collision_map[i].class.prototype.collision_radius);
-		for (var k = 0; k < colliding.length; k++) {
-			this[this.collision_map[i].callback](game, colliding[k]);
-		}
-	}
-};
 
 
 function EnemyEntity(game, px, py, width, height, image, path) {
@@ -629,12 +610,12 @@ function main () {
 		// 	{ timeout: 60, repeat: 5, sy: 1, call: [{ method: 'fire', args: [300, 300] }] },
 		// ]));
 
-		// game.entities.push(new UFOCorsairEnemy(game, 320, -100, [
-		// 	{ timeout: 360, angle: 90, speed: 0.5 },
-		// 	{ timeout: 180, repeat: 2, angle: 90, speed: 0.1, call: [{ method: 'fire' }] },
-		// 	{ timeout: 180, repeat: 2, angle: 90, da: 90 / (180 * 2), speed: 0.25, call: [{ method: 'fire' }] },
-		// 	{ timeout: 360, angle: 180, speed: 0.75, call: [{ method: 'fire' }] },
-		// ]));
+		game.entities.push(new UFOCorsairEnemy(game, 320, -100, [
+			{ timeout: 360, angle: 90, speed: 0.5 },
+			{ timeout: 180, repeat: 2, angle: 90, speed: 0.1, call: [{ method: 'fire' }] },
+			{ timeout: 180, repeat: 2, angle: 90, da: 90 / (180 * 2), speed: 0.25, call: [{ method: 'fire' }] },
+			{ timeout: 360, angle: 180, speed: 0.75, call: [{ method: 'fire' }] },
+		]));
 
 		game.entities.push(new UFOPlatform(game, 500,-400, [
 			{ timeout: 1000, sy: 0.5 },

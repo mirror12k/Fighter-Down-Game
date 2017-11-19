@@ -23,6 +23,17 @@ function point_offset(angle, dist) {
 	return { px: dist * Math.cos(Math.PI * angle / 180), py: dist * Math.sin(Math.PI * angle / 180), };
 }
 
+function point_dist(px, py) {
+	return (px ** 2 + py ** 2) ** 0.5;
+}
+
+function point_normal(px, py) {
+	var dist = (px ** 2 + py ** 2) ** 0.5;
+	if (dist === 0)
+		return { px: 0, py: 0 };
+	return { px: px / dist, py: py / dist, };
+}
+
 function d2_point_offset(angle, px, py) {
 	return {
 		px: px * Math.cos(Math.PI * angle / 180) - py * Math.sin(Math.PI * angle / 180),
@@ -195,6 +206,22 @@ GameSystem.prototype.find_near = function(me, type, dist) {
 	return found;
 };
 
+GameSystem.prototype.find_near_dynamic = function(me, type, dist) {
+	var found = [];
+	for (var i = 0; i < this.entities.length; i++) {
+		var ent = this.entities[i];
+		if (ent instanceof type) {
+			var hit_radius = dist + ent.collision_radius;
+			if (Math.abs(ent.px - me.px) < hit_radius && Math.abs(ent.py - me.py) < hit_radius &&
+				Math.pow(Math.pow(ent.px - me.px, 2) + Math.pow(ent.py - me.py, 2), 0.5) < hit_radius) {
+				found.push(ent);
+			}
+		}
+	}
+
+	return found;
+};
+
 
 function Entity(game) {
 	this.sub_entities = [];
@@ -233,6 +260,7 @@ function ScreenEntity(game, px, py, width, height, img) {
 	this.angle_granularity = 15;
 }
 ScreenEntity.prototype = Object.create(Entity.prototype);
+ScreenEntity.prototype.constructor = ScreenEntity;
 ScreenEntity.prototype.class_name = 'ScreenEntity';
 ScreenEntity.prototype.draw = function(ctx) {
 	// ctx.drawImage(this.img, this.px - this.width / 2, this.py - this.height / 2, this.width, this.height);
@@ -297,6 +325,7 @@ function ParticleEffectSystem(game, config) {
 		this.prepare_buffer();
 }
 ParticleEffectSystem.prototype = Object.create(ScreenEntity.prototype);
+ParticleEffectSystem.prototype.constructor = ParticleEffectSystem;
 ParticleEffectSystem.prototype.class_name = 'ParticleEffectSystem';
 ParticleEffectSystem.prototype.prepare_buffer = function() {
 	this.buffer_canvas = document.createElement('canvas');
@@ -417,6 +446,7 @@ function PathEntity(game, px, py, width, height, img, path) {
 	this.current_action = undefined;
 }
 PathEntity.prototype = Object.create(ScreenEntity.prototype);
+PathEntity.prototype.constructor = PathEntity;
 PathEntity.prototype.class_name = 'PathEntity';
 PathEntity.prototype.trigger_path_action = function(game) {
 	if (this.current_action.delete !== undefined) {
@@ -513,7 +543,7 @@ PathEntity.prototype.update = function(game) {
 
 		if (this.current_action.trail) {
 			if (Math.random() < this.current_action.trail.thickness) {
-				game.particle_systems[this.current_action.trail.type].add_particle(this.px, this.py, 2);
+				game.particle_systems[this.current_action.trail.type].add_particle(this.px, this.py, this.current_action.trail.speed || 2);
 			}
 		}
 
@@ -531,6 +561,33 @@ PathEntity.prototype.update = function(game) {
 					this.current_action = undefined;
 				}
 			}
+		}
+	}
+};
+
+
+
+
+function CollidingEntity(game, px, py, width, height, image, path) {
+	PathEntity.call(this, game, px, py, width, height, image, path);
+}
+CollidingEntity.prototype = Object.create(PathEntity.prototype);
+CollidingEntity.prototype.constructor = CollidingEntity;
+CollidingEntity.prototype.class_name = 'CollidingEntity';
+CollidingEntity.prototype.collision_radius = 10;
+CollidingEntity.prototype.collision_map = [];
+
+CollidingEntity.prototype.update = function(game) {
+	PathEntity.prototype.update.call(this, game);
+	this.check_collision(game);
+};
+CollidingEntity.prototype.check_collision = function(game) {
+	for (var i = 0; i < this.collision_map.length; i++) {
+		// console.log("debug: ", this.collision_radius + this.collision_map[i].class.prototype.collision_radius);
+		var colliding = game.find_near(this, this.collision_map[i].class, this.collision_radius + this.collision_map[i].class.prototype.collision_radius);
+		// var colliding = game.find_near_dynamic(this, this.collision_map[i].class, this.collision_radius);
+		for (var k = 0; k < colliding.length; k++) {
+			this[this.collision_map[i].callback](game, colliding[k]);
 		}
 	}
 };
