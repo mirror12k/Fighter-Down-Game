@@ -1,16 +1,16 @@
 
 function load_image (url, callback) {
-	var img = new Image();
-	img.onload = callback.bind(undefined, img);
-	img.src = url;
+	var image = new Image();
+	image.onload = callback.bind(undefined, image);
+	image.src = url;
 }
 
 function load_all_images (images, callback) {
 	var keys = Object.keys(images);
 	var count_loaded = 0;
 	for (var i = 0; i < keys.length; i++) {
-		load_image(images[keys[i]], (function (key, img) {
-			images[key] = img;
+		load_image(images[keys[i]], (function (key, image) {
+			images[key] = image;
 
 			count_loaded++;
 			if (count_loaded === keys.length)
@@ -226,6 +226,7 @@ GameSystem.prototype.find_near_dynamic = function(me, type, dist) {
 function Entity(game) {
 	this.sub_entities = [];
 	this.ui_entities = [];
+	this.visible = true;
 }
 Entity.prototype.class_name = 'Entity';
 Entity.prototype.z_index = 0;
@@ -235,17 +236,21 @@ Entity.prototype.update = function(game) {
 	}
 };
 Entity.prototype.draw = function(ctx) {
-	for (var i = 0; i < this.sub_entities.length; i++) {
-		this.sub_entities[i].draw(ctx);
+	if (this.visible) {
+		for (var i = 0; i < this.sub_entities.length; i++) {
+			this.sub_entities[i].draw(ctx);
+		}
 	}
 };
 Entity.prototype.draw_ui = function(ctx) {
-	for (var i = 0; i < this.ui_entities.length; i++) {
-		this.ui_entities[i].draw(ctx);
+	if (this.visible) {
+		for (var i = 0; i < this.ui_entities.length; i++) {
+			this.ui_entities[i].draw(ctx);
+		}
 	}
 };
 
-function ScreenEntity(game, px, py, width, height, img) {
+function ScreenEntity(game, px, py, width, height, image) {
 	Entity.call(this, game);
 	this.px = px;
 	this.py = py;
@@ -254,7 +259,7 @@ function ScreenEntity(game, px, py, width, height, img) {
 	this.max_frame = 1;
 	this.width = width;
 	this.height = height;
-	this.img = img;
+	this.image = image;
 
 	this.rotation = 0;
 	this.angle_granularity = 15;
@@ -262,29 +267,6 @@ function ScreenEntity(game, px, py, width, height, img) {
 ScreenEntity.prototype = Object.create(Entity.prototype);
 ScreenEntity.prototype.constructor = ScreenEntity;
 ScreenEntity.prototype.class_name = 'ScreenEntity';
-ScreenEntity.prototype.draw = function(ctx) {
-	// ctx.drawImage(this.img, this.px - this.width / 2, this.py - this.height / 2, this.width, this.height);
-	ctx.save();
-
-	ctx.translate(this.px, this.py);
-	ctx.rotate(Math.PI * (Math.floor(this.angle / this.angle_granularity) * this.angle_granularity) / 180);
-
-	for (var i = 0; i < this.sub_entities.length; i++) {
-		if (this.sub_entities[i].z_index < this.z_index)
-			this.sub_entities[i].draw(ctx);
-	}
-
-	ctx.drawImage(this.img,
-		this.frame * (this.img.width / this.max_frame), 0, this.img.width / this.max_frame, this.img.height,
-		0 - this.width / 2, 0 - this.height / 2, this.width, this.height);
-
-	for (var i = 0; i < this.sub_entities.length; i++) {
-		if (this.sub_entities[i].z_index >= this.z_index)
-			this.sub_entities[i].draw(ctx);
-	}
-
-	ctx.restore();
-};
 ScreenEntity.prototype.update = function(game) {
 	Entity.prototype.update.call(this, game);
 	if (this.rotation) {
@@ -292,18 +274,46 @@ ScreenEntity.prototype.update = function(game) {
 		this.angle %= 360;
 	}
 };
-Entity.prototype.draw_ui = function(ctx) {
-	ctx.save();
-	ctx.translate(this.px, this.py);
-	for (var i = 0; i < this.ui_entities.length; i++) {
-		this.ui_entities[i].draw(ctx);
+ScreenEntity.prototype.draw = function(ctx) {
+	// ctx.drawImage(this.image, this.px - this.width / 2, this.py - this.height / 2, this.width, this.height);
+	if (this.visible) {
+		ctx.save();
+
+		ctx.translate(this.px, this.py);
+		ctx.rotate(Math.PI * (Math.floor(this.angle / this.angle_granularity) * this.angle_granularity) / 180);
+
+		for (var i = 0; i < this.sub_entities.length; i++) {
+			if (this.sub_entities[i].z_index < this.z_index)
+				this.sub_entities[i].draw(ctx);
+		}
+
+		ctx.drawImage(this.image,
+			this.frame * (this.image.width / this.max_frame), 0, this.image.width / this.max_frame, this.image.height,
+			0 - this.width / 2, 0 - this.height / 2, this.width, this.height);
+
+		for (var i = 0; i < this.sub_entities.length; i++) {
+			if (this.sub_entities[i].z_index >= this.z_index)
+				this.sub_entities[i].draw(ctx);
+		}
+
+		ctx.restore();
 	}
-	ctx.restore();
+};
+ScreenEntity.prototype.draw_ui = function(ctx) {
+	if (this.visible) {
+		ctx.save();
+		ctx.translate(this.px, this.py);
+		for (var i = 0; i < this.ui_entities.length; i++) {
+			this.ui_entities[i].draw(ctx);
+		}
+		ctx.restore();
+	}
 };
 
 
 
 function ParticleEffectSystem(game, config) {
+	ScreenEntity.call(this, game);
 	this.fill_style = config.fill_style;
 	this.particle_image = config.particle_image || game.images.particle_effect_generic;
 
@@ -399,34 +409,35 @@ ParticleEffectSystem.prototype.update = function(game) {
 	}
 };
 ParticleEffectSystem.prototype.draw = function(ctx) {
+	if (this.visible) {
+		// console.log("drawing ", this.particles.length, "particles");
+		for (var i = 0; i < this.particles.length; i++) {
+			var p = this.particles[i];
+			ctx.save();
 
-	// console.log("drawing ", this.particles.length, "particles");
-	for (var i = 0; i < this.particles.length; i++) {
-		var p = this.particles[i];
-		ctx.save();
+			ctx.translate(p.px, p.py);
+			ctx.rotate(Math.PI * (Math.floor(p.angle / 15) * 15) / 180);
+			// var width = this.particle_width;
+			// var height = this.particle_height;
+			var width = this.particle_width * ((6 - p.frame) / 4);
+			var height = this.particle_height * ((6 - p.frame) / 4);
+			if (this.dynamic_images) {
+				ctx.drawImage(p.image, 
+					p.sourcex, p.sourcey, p.width, p.height,
+					// this.frame_width * p.frame, 0, this.frame_width, this.height,
+					0 - p.width / 2, 0 - p.height / 2, p.width, p.height);
+			} else if (this.fill_style !== undefined) {
+				ctx.drawImage(this.buffer_canvas, 
+					this.frame_width * p.frame, 0, this.frame_width, this.height,
+					0 - width / 2, 0 - height / 2, width, height);
+			} else {
+				ctx.drawImage(this.particle_image, 
+					this.frame_width * p.frame, 0, this.frame_width, this.height,
+					0 - width / 2, 0 - height / 2, width, height);
+			}
 
-		ctx.translate(p.px, p.py);
-		ctx.rotate(Math.PI * (Math.floor(p.angle / 15) * 15) / 180);
-		// var width = this.particle_width;
-		// var height = this.particle_height;
-		var width = this.particle_width * ((6 - p.frame) / 4);
-		var height = this.particle_height * ((6 - p.frame) / 4);
-		if (this.dynamic_images) {
-			ctx.drawImage(p.image, 
-				p.sourcex, p.sourcey, p.width, p.height,
-				// this.frame_width * p.frame, 0, this.frame_width, this.height,
-				0 - p.width / 2, 0 - p.height / 2, p.width, p.height);
-		} else if (this.fill_style !== undefined) {
-			ctx.drawImage(this.buffer_canvas, 
-				this.frame_width * p.frame, 0, this.frame_width, this.height,
-				0 - width / 2, 0 - height / 2, width, height);
-		} else {
-			ctx.drawImage(this.particle_image, 
-				this.frame_width * p.frame, 0, this.frame_width, this.height,
-				0 - width / 2, 0 - height / 2, width, height);
+			ctx.restore();
 		}
-
-		ctx.restore();
 	}
 };
 
@@ -437,8 +448,8 @@ ParticleEffectSystem.prototype.draw = function(ctx) {
 
 
 
-function PathEntity(game, px, py, width, height, img, path) {
-	ScreenEntity.call(this, game, px, py, width, height, img);
+function PathEntity(game, px, py, width, height, image, path) {
+	ScreenEntity.call(this, game, px, py, width, height, image);
 
 	// console.log('debug path: ', path);
 	this.path = path;
@@ -493,7 +504,7 @@ PathEntity.prototype.trigger_path_action = function(game) {
 	if (this.current_action.spawn) {
 		for (var i = 0; i < this.current_action.spawn.length; i++) {
 			// console.log("debug path: ", this.current_action.spawn[i].path);
-			var bullet = new EnemyBullet(game, this.px, this.py, this.current_action.spawn[i].path, this.current_action.spawn[i].img);
+			var bullet = new EnemyBullet(game, this.px, this.py, this.current_action.spawn[i].path, this.current_action.spawn[i].image);
 			bullet.angle = this.angle;
 			game.entities_to_add.push(bullet);
 		}

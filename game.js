@@ -1,18 +1,18 @@
 
 
 
-function EnemyBullet(game, px, py, path, img) {
-	img = img || game.images.orange_round_bullet;
-	PathEntity.call(this, game, px, py, 16, 16, img, path);
+function EnemyBullet(game, px, py, path, image) {
+	image = image || game.images.orange_round_bullet;
+	PathEntity.call(this, game, px, py, 16, 16, image, path);
 
 	this.angle_granularity = 5;
 }
 EnemyBullet.prototype = Object.create(PathEntity.prototype);
 EnemyBullet.prototype.collision_radius = 6;
 
-function PlayerBullet(game, px, py, path, img) {
-	img = img || game.images.orange_round_bullet;
-	PathEntity.call(this, game, px, py, 32, 32, img, path);
+function PlayerBullet(game, px, py, path, image) {
+	image = image || game.images.orange_round_bullet;
+	PathEntity.call(this, game, px, py, 32, 32, image, path);
 
 	this.angle_granularity = 5;
 }
@@ -68,7 +68,7 @@ EnemyEntity.prototype.on_death = function(game) {
 	}
 	var count = Math.floor(1 + Math.random() * 2);
 	for (var i = 0; i < count; i++) {
-		game.particle_systems.ship_chunks.add_image_particle(this.img, this.width, this.height, this.px, this.py, 3);
+		game.particle_systems.ship_chunks.add_image_particle(this.image, this.width, this.height, this.px, this.py, 3);
 	}
 };
 
@@ -85,7 +85,7 @@ UFOEnemy.prototype.collision_radius = 32;
 
 // 	ctx.translate(this.px, this.py);
 // 	ctx.rotate(Math.PI * (Math.floor(this.angle / 15) * 15) / 180);
-// 	ctx.drawImage(this.img, 0 - this.width / 2, 0 - this.height / 2, this.width, this.height);
+// 	ctx.drawImage(this.image, 0 - this.width / 2, 0 - this.height / 2, this.width, this.height);
 
 // 	ctx.restore();
 // };
@@ -186,8 +186,8 @@ UFOPlatform.prototype.update = function(game) {
 // 	for (var i = 0; i < this.sections.length; i++) {
 // 		this.sections[i].draw(ctx);
 // 	}
-// 	ctx.drawImage(this.img,
-// 		this.frame * this.width, 0, this.img.width, this.img.height,
+// 	ctx.drawImage(this.image,
+// 		this.frame * this.width, 0, this.image.width, this.image.height,
 // 		0 - this.width / 2, 0 - this.height / 2, this.width, this.height);
 
 // 	ctx.restore();
@@ -208,7 +208,7 @@ UFOPlatform.prototype.spawn_bullets = function(game) {
 	// prepare burst spawn
 	var spawn_burst = [];
 	for (var i = 0; i < 360 / 45; i++) {
-		spawn_burst.push({ img: game.images.bright_purple_square_bullet, path: [{ timeout: 120, angle: target_angle + i * 45, speed: 1 }] });
+		spawn_burst.push({ image: game.images.bright_purple_square_bullet, path: [{ timeout: 120, angle: target_angle + i * 45, speed: 1 }] });
 	}
 
 	// spawn flak bullet
@@ -261,8 +261,8 @@ UFOStation.prototype.update = function(game) {
 // 	ctx.rotate(Math.PI * (Math.floor(this.angle / this.angle_granularity) * this.angle_granularity) / 180);
 // 	Entity.prototype.draw.call(this, ctx);
 
-// 	ctx.drawImage(this.img,
-// 		this.frame * (this.img.width / this.max_frame), 0, this.img.width / this.max_frame, this.img.height,
+// 	ctx.drawImage(this.image,
+// 		this.frame * (this.image.width / this.max_frame), 0, this.image.width / this.max_frame, this.image.height,
 // 		0 - this.width / 2, 0 - this.height / 2, this.width, this.height);
 
 // 	ctx.restore();
@@ -371,7 +371,7 @@ UFOCorsairEnemy.prototype = Object.create(PathEntity.prototype);
 
 // 	ctx.translate(this.px, this.py);
 // 	ctx.rotate(Math.PI * (Math.floor(this.angle / 15) * 15) / 180);
-// 	ctx.drawImage(this.img, 0 - this.width / 2, 0 - this.height / 2, this.width, this.height);
+// 	ctx.drawImage(this.image, 0 - this.width / 2, 0 - this.height / 2, this.width, this.height);
 
 // 	this.crystal_ent.draw(ctx);
 
@@ -385,7 +385,7 @@ UFOCorsairEnemy.prototype.fire = function(game) {
 			{
 				timeout: 20, repeat: 8,
 				spawn: [{
-					img: game.images.bright_purple_square_bullet,
+					image: game.images.bright_purple_square_bullet,
 					path: [{timeout: 90, trail: { type: 'purple_particles', thickness: 0.01 }, }, {delete: true}],
 				}],
 				trail: { type: 'purple_particles', thickness: 0.03 }, angle: this.angle, speed: 3, da: da
@@ -396,7 +396,7 @@ UFOCorsairEnemy.prototype.fire = function(game) {
 			{
 				timeout: 20, repeat: 8,
 				spawn: [{
-					img: game.images.bright_purple_square_bullet,
+					image: game.images.bright_purple_square_bullet,
 					path: [{timeout: 90, trail: { type: 'purple_particles', thickness: 0.01 }, }, {delete: true}],
 				}],
 				trail: { type: 'purple_particles', thickness: 0.03 }, angle: this.angle, speed: 3, da: -da
