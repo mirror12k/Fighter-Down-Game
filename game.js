@@ -579,10 +579,10 @@ function main () {
 
 		game.entities.push(new PlayerShip(game, 320, 240));
 
-		game.entities.push(new UFOStation(game, 320, 0, [
-			{ timeout: 120, sy: 0.1 },
-			{ timeout: 360, repeat: 4, sy: 0.1, call: [{ method: 'fire', args: [320, 240] }] },
-		]));
+		// game.entities.push(new UFOStation(game, 320, 0, [
+		// 	{ timeout: 120, sy: 0.1 },
+		// 	{ timeout: 360, repeat: 4, sy: 0.1, call: [{ method: 'fire', args: [320, 240] }] },
+		// ]));
 
 		game.entities.push(new UFOEnemy(game, 0,100, [
 			{ timeout: 640, sx: 1 },
@@ -611,17 +611,17 @@ function main () {
 		// ]));
 
 		game.entities.push(new UFOCorsairEnemy(game, 320, -100, [
-			{ timeout: 360, angle: 90, speed: 0.5 },
+			{ timeout: 180, angle: 90, speed: 1 },
 			{ timeout: 180, repeat: 2, angle: 90, speed: 0.1, call: [{ method: 'fire' }] },
 			{ timeout: 180, repeat: 2, angle: 90, da: 90 / (180 * 2), speed: 0.25, call: [{ method: 'fire' }] },
 			{ timeout: 360, angle: 180, speed: 0.75, call: [{ method: 'fire' }] },
 		]));
 
-		game.entities.push(new UFOPlatform(game, 500,-400, [
-			{ timeout: 1000, sy: 0.5 },
-			{ timeout: 120, repeat: 4, call: [{ method: 'fire', args: [300, 300] }] },
-			{ timeout: 360, sy: 0.5, sx: 0.5 },
-		]));
+		// game.entities.push(new UFOPlatform(game, 500,-400, [
+		// 	{ timeout: 1000, sy: 0.5 },
+		// 	{ timeout: 120, repeat: 4, call: [{ method: 'fire', args: [300, 300] }] },
+		// 	{ timeout: 360, sy: 0.5, sx: 0.5 },
+		// ]));
 
 
 		// game.entities.push(new EnemyBullet(game, 8,8, []));
@@ -632,15 +632,27 @@ function main () {
 		// game.entities.push(new UFOPlatform(game, 500,100));
 		// game.entities.push(new UFOEnemy(game, 100,100));
 		// game.entities.push(new UFOCorsairEnemy(game, 300,100));
-		game.particle_systems.purple_particles = new ParticleEffectSystem(game, { fill_style: '#404', });
-		game.particle_systems.red_particles = new ParticleEffectSystem(game, { fill_style: '#f88', particle_size: 12, particle_longevity: 0.3, });
+		game.particle_systems.purple_particles = new ParticleEffectSystem(game, {
+			fill_style: '#404',
+			particle_deflate: 1.5,
+		});
+		game.particle_systems.red_particles = new ParticleEffectSystem(game, {
+			fill_style: '#f88',
+			particle_size: 12,
+			particle_longevity: 0.3,
+			particle_deflate: 1.5,
+		});
 		game.particle_systems.ship_chunks = new ParticleEffectSystem(game, {
-					dynamic_images: true,
-					max_frame: 1,
-					particle_longevity: 0.01, 
-				});
-		game.particle_systems.explosion_particles = new ParticleEffectSystem(game,
-				{ particle_size: 32, particle_image: game.images.particle_effect_explosion, particle_longevity: 0.3, particle_respawn: 0.2 });
+			dynamic_images: true,
+			max_frame: 1,
+			particle_longevity: 0.01, 
+		});
+		game.particle_systems.explosion_particles = new ParticleEffectSystem(game, {
+			particle_image: game.images.particle_effect_explosion,
+			particle_size: 32,
+			particle_longevity: 0.3,
+			particle_respawn: 0.2,
+		});
 
 		setInterval(game.step_game_frame.bind(game, ctx), 1000 / 60);
 	});

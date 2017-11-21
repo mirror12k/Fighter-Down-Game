@@ -343,6 +343,7 @@ function ParticleEffectSystem(game, config) {
 	this.particle_width = config.particle_width || config.particle_size || 16;
 	this.particle_height = config.particle_height || config.particle_size || 16;
 
+	this.particle_deflate = config.particle_deflate;
 	this.particle_longevity = config.particle_longevity || 0.05;
 	this.particle_respawn = config.particle_respawn || 0;
 	this.dynamic_images = config.dynamic_images;
@@ -356,8 +357,8 @@ ParticleEffectSystem.prototype.constructor = ParticleEffectSystem;
 ParticleEffectSystem.prototype.class_name = 'ParticleEffectSystem';
 ParticleEffectSystem.prototype.prepare_buffer = function() {
 	this.buffer_canvas = document.createElement('canvas');
-	this.buffer_canvas.width = this.width;
-	this.buffer_canvas.height = this.height;
+	this.buffer_canvas.width = this.particle_image.width;
+	this.buffer_canvas.height = this.particle_image.height;
 	var buffer_context = this.buffer_canvas.getContext('2d');
 
 	buffer_context.fillStyle = this.fill_style;
@@ -458,6 +459,12 @@ ParticleEffectSystem.prototype.draw = function(ctx) {
 			ctx.rotate(Math.PI * (Math.floor(p.angle / 15) * 15) / 180);
 			var width = this.particle_width;
 			var height = this.particle_height;
+			if (this.particle_deflate) {
+				// console.log("debug", this.particle_deflate);
+				var multiplier = (this.max_frame * this.particle_deflate - p.frame) / this.max_frame;
+				width *= multiplier;
+				height *= multiplier;
+			}
 			// var width = this.particle_width * ((6 - p.frame) / 4);
 			// var height = this.particle_height * ((6 - p.frame) / 4);
 			if (this.dynamic_images) {
@@ -466,8 +473,6 @@ ParticleEffectSystem.prototype.draw = function(ctx) {
 					// this.width * p.frame, 0, this.width, this.height,
 					0 - p.width / 2, 0 - p.height / 2, p.width, p.height);
 			} else if (this.static_images) {
-				// console.log("debug", this.particle_image, p);
-				// console.log("debug", this.width * p.frame, 0, this.width, this.height);
 				ctx.drawImage(this.particle_image, 
 					this.width * p.frame, 0, this.width, this.height,
 					0 - width / 2, 0 - height / 2, width, height);
