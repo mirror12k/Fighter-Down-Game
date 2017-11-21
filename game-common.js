@@ -334,19 +334,21 @@ function ParticleEffectSystem(game, config) {
 
 	this.particles = [];
 
-	this.width = 32;
+	this.width = 8;
 	this.height = 8;
-	this.frame_width = 8;
-	this.max_frame = config.max_frame || (this.width / this.frame_width);
+	// this.frame_width = 8;
+	// this.max_frame = config.max_frame || (this.width / this.frame_width);
+	this.max_frame = config.max_frame || (this.particle_image.width / this.width);
 
-	this.particle_width = config.particle_size || 16;
-	this.particle_height = config.particle_size || 16;
+	this.particle_width = config.particle_width || config.particle_size || 16;
+	this.particle_height = config.particle_height || config.particle_size || 16;
 
 	this.particle_longevity = config.particle_longevity || 0.05;
 	this.particle_respawn = config.particle_respawn || 0;
 	this.dynamic_images = config.dynamic_images;
+	this.static_images = config.static_images;
 
-	if (this.fill_style !== undefined && !this.dynamic_images)
+	if (this.fill_style !== undefined && !this.dynamic_images && !this.static_images)
 		this.prepare_buffer();
 }
 ParticleEffectSystem.prototype = Object.create(ScreenEntity.prototype);
@@ -364,9 +366,19 @@ ParticleEffectSystem.prototype.prepare_buffer = function() {
 	buffer_context.globalCompositeOperation = "destination-atop";
 	buffer_context.drawImage(this.particle_image, 0,0);
 };
-ParticleEffectSystem.prototype.add_particle = function(px, py, speed) {
+ParticleEffectSystem.prototype.add_particle = function(px, py, speed, frame, angle) {
 	var sx = ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
 	var sy = ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
+
+	if (angle === undefined)
+		angle = Math.random() * 360;
+	if (frame === undefined) {
+		if (this.static_images) {
+			frame = Math.floor(Math.random() * this.max_frame);
+		} else {
+			frame = 0;
+		}
+	}
 
 	this.particles.push({
 		px: px,
@@ -374,8 +386,9 @@ ParticleEffectSystem.prototype.add_particle = function(px, py, speed) {
 		sx: sx,
 		sy: sy,
 		sr: Math.random() - 0.5,
-		angle: Math.random() * 360,
-		frame: 0,
+		angle: angle,
+		frame: frame,
+		timer: 4,
 	});
 };
 ParticleEffectSystem.prototype.add_image_particle = function(image, width, height, px, py, speed) {
@@ -412,12 +425,23 @@ ParticleEffectSystem.prototype.update = function(game) {
 		this.particles[i].angle += this.particles[i].sr;
 
 		if (Math.random() < this.particle_longevity) {
-			this.particles[i].frame++;
-			if (this.particles[i].frame >= this.max_frame) {
-				if (Math.random() < this.particle_respawn) {
-					this.particles[i].frame = 0;
-				} else {
-					this.particles.splice(i, 1);
+			if (this.static_images) {
+				this.particles[i].timer--;
+				if (this.particles[i].timer <= 0) {
+					if (Math.random() < this.particle_respawn) {
+						this.particles[i].timer = 4;
+					} else {
+						this.particles.splice(i, 1);
+					}
+				}
+			} else {
+				this.particles[i].frame++;
+				if (this.particles[i].frame >= this.max_frame) {
+					if (Math.random() < this.particle_respawn) {
+						this.particles[i].frame = 0;
+					} else {
+						this.particles.splice(i, 1);
+					}
 				}
 			}
 		}
@@ -432,22 +456,28 @@ ParticleEffectSystem.prototype.draw = function(ctx) {
 
 			ctx.translate(p.px, p.py);
 			ctx.rotate(Math.PI * (Math.floor(p.angle / 15) * 15) / 180);
-			// var width = this.particle_width;
-			// var height = this.particle_height;
-			var width = this.particle_width * ((6 - p.frame) / 4);
-			var height = this.particle_height * ((6 - p.frame) / 4);
+			var width = this.particle_width;
+			var height = this.particle_height;
+			// var width = this.particle_width * ((6 - p.frame) / 4);
+			// var height = this.particle_height * ((6 - p.frame) / 4);
 			if (this.dynamic_images) {
 				ctx.drawImage(p.image, 
 					p.sourcex, p.sourcey, p.width, p.height,
-					// this.frame_width * p.frame, 0, this.frame_width, this.height,
+					// this.width * p.frame, 0, this.width, this.height,
 					0 - p.width / 2, 0 - p.height / 2, p.width, p.height);
+			} else if (this.static_images) {
+				// console.log("debug", this.particle_image, p);
+				// console.log("debug", this.width * p.frame, 0, this.width, this.height);
+				ctx.drawImage(this.particle_image, 
+					this.width * p.frame, 0, this.width, this.height,
+					0 - width / 2, 0 - height / 2, width, height);
 			} else if (this.fill_style !== undefined) {
 				ctx.drawImage(this.buffer_canvas, 
-					this.frame_width * p.frame, 0, this.frame_width, this.height,
+					this.width * p.frame, 0, this.width, this.height,
 					0 - width / 2, 0 - height / 2, width, height);
 			} else {
 				ctx.drawImage(this.particle_image, 
-					this.frame_width * p.frame, 0, this.frame_width, this.height,
+					this.width * p.frame, 0, this.width, this.height,
 					0 - width / 2, 0 - height / 2, width, height);
 			}
 
