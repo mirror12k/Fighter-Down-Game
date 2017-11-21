@@ -27,6 +27,10 @@ function point_dist(px, py) {
 	return (px ** 2 + py ** 2) ** 0.5;
 }
 
+function points_dist(p1, p2) {
+	return ((p1.px - p2.px) ** 2 + (p1.py - p2.py) ** 2) ** 0.5;
+}
+
 function point_normal(px, py) {
 	var dist = (px ** 2 + py ** 2) ** 0.5;
 	if (dist === 0)
@@ -189,6 +193,17 @@ GameSystem.prototype.draw = function (ctx) {
 	for (var i = 0; i < this.entities.length; i++) {
 		this.entities[i].draw_ui(ctx);
 	}
+};
+
+GameSystem.prototype.query_entities = function(type) {
+	var found = [];
+	for (var i = 0; i < this.entities.length; i++) {
+		if (this.entities[i] instanceof type) {
+			found.push(this.entities[i]);
+		}
+	}
+
+	return found;
 };
 
 GameSystem.prototype.find_near = function(me, type, dist) {
