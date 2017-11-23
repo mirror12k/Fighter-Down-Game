@@ -160,8 +160,12 @@ GameSystem.prototype.update = function () {
 		this.entities.push(this.entities_to_add[i]);
 	this.entities_to_add = [];
 
-	for (var i = 0; i < this.entities.length; i++) {
-		this.entities[i].update(this);
+	try {
+		for (var i = 0; i < this.entities.length; i++) {
+			this.entities[i].update(this);
+		}
+	} catch (e) {
+		console.error('exception during update:', e.message);
 	}
 
 	var keys = Object.keys(this.particle_systems);
@@ -175,9 +179,13 @@ GameSystem.prototype.draw = function (ctx) {
 	ctx.fillStyle = 'rgb(0, 0, 0)';
 	ctx.fillRect(0, 0, 640, 480);
 
-	for (var i = 0; i < this.entities.length; i++) {
+	var entities_to_draw = this.entities.slice();
+	entities_to_draw.sort(function (a, b) {
+		return a.z_index - b.z_index;
+	});
+	for (var i = 0; i < entities_to_draw.length; i++) {
 		// var start = new Date().getTime(); // DEBUG_TIME
-		this.entities[i].draw(ctx);
+		entities_to_draw[i].draw(ctx);
 		// this.debug_time.game_entity_draw_time[this.entities[i].class_name] = // DEBUG_TIME
 			// (this.debug_time.game_entity_draw_time[this.entities[i].class_name] || 0) + new Date().getTime() - start; // DEBUG_TIME
 	}
@@ -221,7 +229,7 @@ GameSystem.prototype.find_near = function(me, type, dist) {
 	return found;
 };
 
-GameSystem.prototype.find_near_dynamic = function(me, type, dist) {
+GameSystem.prototype.find_colliding = function(me, type, dist) {
 	var found = [];
 	for (var i = 0; i < this.entities.length; i++) {
 		var ent = this.entities[i];
@@ -350,12 +358,12 @@ function ParticleEffectSystem(game, config) {
 	this.static_images = config.static_images;
 
 	if (this.fill_style !== undefined && !this.dynamic_images && !this.static_images)
-		this.prepare_buffer();
+		this.render();
 }
 ParticleEffectSystem.prototype = Object.create(ScreenEntity.prototype);
 ParticleEffectSystem.prototype.constructor = ParticleEffectSystem;
 ParticleEffectSystem.prototype.class_name = 'ParticleEffectSystem';
-ParticleEffectSystem.prototype.prepare_buffer = function() {
+ParticleEffectSystem.prototype.render = function() {
 	this.buffer_canvas = document.createElement('canvas');
 	this.buffer_canvas.width = this.particle_image.width;
 	this.buffer_canvas.height = this.particle_image.height;
@@ -645,7 +653,7 @@ CollidingEntity.prototype.update = function(game) {
 CollidingEntity.prototype.check_collision = function(game) {
 	for (var i = 0; i < this.collision_map.length; i++) {
 		// console.log("debug: ", this.collision_radius + this.collision_map[i].class.prototype.collision_radius);
-		var colliding = game.find_near(this, this.collision_map[i].class, this.collision_radius + this.collision_map[i].class.prototype.collision_radius);
+		var colliding = game.find_colliding(this, this.collision_map[i].class, this.collision_radius);
 		// var colliding = game.find_near_dynamic(this, this.collision_map[i].class, this.collision_radius);
 		for (var k = 0; k < colliding.length; k++) {
 			this[this.collision_map[i].callback](game, colliding[k]);
