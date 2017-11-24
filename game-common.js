@@ -751,6 +751,15 @@ DebugSystem.prototype.draw_debug_text = function(ctx, entry, i) {
 	ctx.fillStyle = entry.color || '#f00';
 
 	ctx.fillText(entry.text, 0, i * 16);
+	var offsetx = ctx.measureText(entry.text).width;
+
+	for (var k = 0; k < entry.rays.length; k++) {
+		this.draw_debug_ray(ctx, {
+			start: { px: offsetx, py: i * 16 - 8 },
+			end: entry.rays[k],
+			color: entry.color,
+		});
+	}
 };
 DebugSystem.prototype.draw_debug_ray = function(ctx, ray) {
 	ctx.strokeStyle = ray.color || '#f00';
