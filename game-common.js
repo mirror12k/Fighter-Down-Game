@@ -61,6 +61,7 @@ function GameSystem(canvas, images) {
 	this.entities_to_add = [];
 	this.entities_to_remove = [];
 
+	this.game_systems = {};
 	this.particle_systems = {};
 
 
@@ -168,6 +169,11 @@ GameSystem.prototype.update = function () {
 		console.error('exception during update:', e.message);
 	}
 
+	var keys = Object.keys(this.game_systems);
+	for (var i = 0; i < keys.length; i++) {
+		this.game_systems[keys[i]].update(this);
+	}
+
 	var keys = Object.keys(this.particle_systems);
 	for (var i = 0; i < keys.length; i++) {
 		this.particle_systems[keys[i]].update(this);
@@ -194,6 +200,14 @@ GameSystem.prototype.draw = function (ctx) {
 	for (var i = 0; i < keys.length; i++) {
 		// var start = new Date().getTime(); // DEBUG_TIME
 		this.particle_systems[keys[i]].draw(ctx);
+		// this.debug_time.game_entity_draw_time[this.particle_systems[keys[i]].class_name] = // DEBUG_TIME
+			// (this.debug_time.game_entity_draw_time[this.particle_systems[keys[i]].class_name] || 0) + new Date().getTime() - start; // DEBUG_TIME
+	}
+
+	var keys = Object.keys(this.game_systems);
+	for (var i = 0; i < keys.length; i++) {
+		// var start = new Date().getTime(); // DEBUG_TIME
+		this.game_systems[keys[i]].draw(ctx);
 		// this.debug_time.game_entity_draw_time[this.particle_systems[keys[i]].class_name] = // DEBUG_TIME
 			// (this.debug_time.game_entity_draw_time[this.particle_systems[keys[i]].class_name] || 0) + new Date().getTime() - start; // DEBUG_TIME
 	}
