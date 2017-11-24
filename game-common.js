@@ -711,6 +711,8 @@ CollidingEntity.prototype.check_collision = function(game) {
 function DebugSystem(game) {
 	Entity.call(this, game);
 
+	this.debug_text_entries = [];
+
 	this.debug_rays = [];
 	this.next_debug_rays = [];
 	this.debug_squares = [];
@@ -722,43 +724,68 @@ DebugSystem.prototype.update = function(game) {
 	this.next_debug_rays = [];
 	this.debug_squares = this.next_debug_squares;
 	this.next_debug_squares = [];
+
+	for (var i = 0; i < this.debug_text_entries.length; i++) {
+		if (this.debug_text_entries[i]) {
+			this.debug_text_entries[i].update(game);
+		}
+	}
 };
 DebugSystem.prototype.draw = function(ctx) {
 	if (this.visible) {
+		for (var i = 0; i < this.debug_text_entries.length; i++) {
+			this.draw_debug_text(ctx, this.debug_text_entries[i], i + 1);
+		}
+
 		for (var i = 0; i < this.debug_rays.length; i++) {
-			var ray = this.debug_rays[i];
-
-			ctx.strokeStyle = ray.color || '#f00';
-			ctx.lineWidth = ray.thickness || 1;
-			
-			ctx.beginPath();
-			ctx.moveTo(ray.start.px, ray.start.py);
-			ctx.lineTo(ray.end.px, ray.end.py);
-
-			var angle = point_angle(ray.start.px, ray.start.py, ray.end.px, ray.end.py);
-			var offset = point_offset(angle - 135, 10);
-			ctx.lineTo(ray.end.px + offset.px, ray.end.py + offset.py);
-			var offset = point_offset(angle + 135, 10);
-			ctx.lineTo(ray.end.px + offset.px, ray.end.py + offset.py);
-			ctx.lineTo(ray.end.px, ray.end.py);
-			
-			ctx.stroke();
+			this.draw_debug_ray(ctx, this.debug_rays[i]);
 		}
 
 		for (var i = 0; i < this.debug_squares.length; i++) {
-			console.log("debug:", i);
-			var square = this.debug_squares[i];
-
-			ctx.strokeStyle = square.color || '#f00';
-			ctx.lineWidth = 2;
-			
-			ctx.beginPath();
-			var width = square.width || 10;
-			ctx.rect(square.pxy.px - width / 2, square.pxy.py - width / 2, width, width);
-			
-			ctx.stroke();
+			this.draw_debug_square(ctx, this.debug_squares[i]);
 		}
 	}
+};
+DebugSystem.prototype.draw_debug_text = function(ctx, entry, i) {
+	ctx.font = '16pt monospace';
+	ctx.fillStyle = entry.color || '#f00';
+
+	ctx.fillText(entry.text, 0, i * 16);
+};
+DebugSystem.prototype.draw_debug_ray = function(ctx, ray) {
+	ctx.strokeStyle = ray.color || '#f00';
+	ctx.lineWidth = ray.thickness || 1;
+	
+	ctx.beginPath();
+	ctx.moveTo(ray.start.px, ray.start.py);
+	ctx.lineTo(ray.end.px, ray.end.py);
+
+	var angle = point_angle(ray.start.px, ray.start.py, ray.end.px, ray.end.py);
+	var offset = point_offset(angle - 135, 10);
+	ctx.lineTo(ray.end.px + offset.px, ray.end.py + offset.py);
+	var offset = point_offset(angle + 135, 10);
+	ctx.lineTo(ray.end.px + offset.px, ray.end.py + offset.py);
+	ctx.lineTo(ray.end.px, ray.end.py);
+	
+	ctx.stroke();
+};
+DebugSystem.prototype.draw_debug_square = function(ctx, square) {
+	ctx.strokeStyle = square.color || '#f00';
+	ctx.lineWidth = 2;
+	
+	ctx.beginPath();
+	var width = square.width || 10;
+	ctx.rect(square.pxy.px - width / 2, square.pxy.py - width / 2, width, width);
+	
+	ctx.stroke();
+};
+DebugSystem.prototype.add_debug_text = function(entry) {
+	this.debug_text_entries.push({
+		text: entry.text,
+		update: entry.update,
+		color: entry.color || '#f00',
+		rays: entry.rays || [],
+	});
 };
 DebugSystem.prototype.add_debug_ray = function(start, end, color, thickness) {
 	this.next_debug_rays.push({
