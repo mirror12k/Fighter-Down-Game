@@ -228,6 +228,19 @@ GameSystem.prototype.query_entities = function(type) {
 	return found;
 };
 
+GameSystem.prototype.query_entities_by_tag = function(type, tag_type) {
+	var found = [];
+	for (var i = 0; i < this.entities.length; i++) {
+		if (this.entities[i] instanceof type) {
+			if (this.entities[i].get_tag(tag_type) !== undefined) {
+				found.push(this.entities[i]);
+			}
+		}
+	}
+
+	return found;
+};
+
 GameSystem.prototype.find_near = function(me, type, dist) {
 	var found = [];
 	for (var i = 0; i < this.entities.length; i++) {
@@ -263,6 +276,7 @@ GameSystem.prototype.find_colliding = function(me, type, dist) {
 function Entity(game) {
 	this.sub_entities = [];
 	this.ui_entities = [];
+	this.entity_tags = [];
 	this.visible = true;
 }
 Entity.prototype.class_name = 'Entity';
@@ -270,6 +284,14 @@ Entity.prototype.z_index = 0;
 Entity.prototype.update = function(game) {
 	for (var i = 0; i < this.sub_entities.length; i++) {
 		this.sub_entities[i].update(game);
+	}
+	for (var i = this.entity_tags.length - 1; i >= 0; i--) {
+		if (this.entity_tags[i].timer !== undefined) {
+			this.entity_tags[i].timer--;
+			if (this.entity_tags[i] <= 0) {
+				this.entity_tags.splice(i, 1);
+			}
+		}
 	}
 };
 Entity.prototype.draw = function(ctx) {
@@ -285,6 +307,14 @@ Entity.prototype.draw_ui = function(ctx) {
 			this.ui_entities[i].draw(ctx);
 		}
 	}
+};
+Entity.prototype.get_tag = function(type) {
+	for (var i = 0; i < this.entity_tags.length; i++) {
+		if (this.entity_tags[i] instanceof type) {
+			return this.entity_tags[i];
+		}
+	}
+	return undefined;
 };
 
 function ScreenEntity(game, px, py, width, height, image) {
