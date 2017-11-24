@@ -704,3 +704,78 @@ CollidingEntity.prototype.check_collision = function(game) {
 		}
 	}
 };
+
+
+
+
+function DebugSystem(game) {
+	Entity.call(this, game);
+
+	this.debug_rays = [];
+	this.next_debug_rays = [];
+	this.debug_squares = [];
+	this.next_debug_squares = [];
+}
+DebugSystem.prototype = Object.create(Entity.prototype);
+DebugSystem.prototype.update = function(game) {
+	this.debug_rays = this.next_debug_rays;
+	this.next_debug_rays = [];
+	this.debug_squares = this.next_debug_squares;
+	this.next_debug_squares = [];
+};
+DebugSystem.prototype.draw = function(ctx) {
+	if (this.visible) {
+		for (var i = 0; i < this.debug_rays.length; i++) {
+			var ray = this.debug_rays[i];
+
+			ctx.strokeStyle = ray.color || '#f00';
+			ctx.lineWidth = ray.thickness || 1;
+			
+			ctx.beginPath();
+			ctx.moveTo(ray.start.px, ray.start.py);
+			ctx.lineTo(ray.end.px, ray.end.py);
+
+			var angle = point_angle(ray.start.px, ray.start.py, ray.end.px, ray.end.py);
+			var offset = point_offset(angle - 135, 10);
+			ctx.lineTo(ray.end.px + offset.px, ray.end.py + offset.py);
+			var offset = point_offset(angle + 135, 10);
+			ctx.lineTo(ray.end.px + offset.px, ray.end.py + offset.py);
+			ctx.lineTo(ray.end.px, ray.end.py);
+			
+			ctx.stroke();
+		}
+
+		for (var i = 0; i < this.debug_squares.length; i++) {
+			console.log("debug:", i);
+			var square = this.debug_squares[i];
+
+			ctx.strokeStyle = square.color || '#f00';
+			ctx.lineWidth = 2;
+			
+			ctx.beginPath();
+			var width = square.width || 10;
+			ctx.rect(square.pxy.px - width / 2, square.pxy.py - width / 2, width, width);
+			
+			ctx.stroke();
+		}
+	}
+};
+DebugSystem.prototype.add_debug_ray = function(start, end, color, thickness) {
+	this.next_debug_rays.push({
+		start: start,
+		end: end,
+		color: color || '#f00',
+		thickness: thickness || 1,
+	});
+};
+DebugSystem.prototype.add_debug_square = function(pxy, width, color, thickness) {
+	this.next_debug_squares.push({
+		pxy: pxy,
+		width: width,
+		color: color,
+		thickness: thickness,
+	});
+};
+
+
+
