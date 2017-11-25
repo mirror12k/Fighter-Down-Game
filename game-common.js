@@ -815,3 +815,192 @@ DebugSystem.prototype.add_debug_square = function(pxy, width, color, thickness) 
 
 
 
+
+
+
+
+
+function GridSystem (game, sizex, sizey, width, height) {
+	Entity.call(this, game);
+	this.sizex = sizex;
+	this.sizey = sizey;
+	this.width = width;
+	this.height = height;
+
+	this.grid = this.generate_grid(0);
+}
+GridSystem.prototype = Object.create(Entity.prototype);
+GridSystem.prototype.class_name = 'GridSystem';
+GridSystem.prototype.generate_grid = function(value) {
+	var grid = [];
+	for (var x = 0; x < this.sizex; x++) {
+		grid[x] = [];
+		for (var y = 0; y < this.sizey; y++) {
+			grid[x][y] = value;
+		}
+	}
+
+	return grid;
+};
+GridSystem.prototype.get_point = function(px, py) {
+	return [
+		Math.floor(px / this.width),
+		Math.floor(py / this.height),
+	];
+};
+
+GridSystem.prototype.find_edges = function(initial_point, degree) {
+	var points = [initial_point];
+	var checked = this.generate_grid(false);
+	checked[initial_point[0]][initial_point[1]] = true;
+	var edges = [];
+
+	degree = degree || 1;
+
+	while (points.length > 0) {
+		var new_points = [];
+
+		for (var i = 0; i < points.length; i++) {
+			var x = points[i][0];
+			var y = points[i][1];
+
+			if (this.grid[x][y]) {
+
+				if (x > 0) {
+					if (checked[x - 1][y] === false) {
+						checked[x - 1][y] = true;
+						new_points.push([x - 1, y]);
+					}
+				}
+				if (y > 0) {
+					if (checked[x][y - 1] === false) {
+						checked[x][y - 1] = true;
+						new_points.push([x, y - 1]);
+					}
+				}
+				if (x < this.sizex - 1) {
+					if (checked[x + 1][y] === false) {
+						checked[x + 1][y] = true;
+						new_points.push([x + 1, y]);
+					}
+				}
+				if (y < this.sizey - 1) {
+					if (checked[x][y + 1] === false) {
+						checked[x][y + 1] = true;
+						new_points.push([x, y + 1]);
+					}
+				}
+			} else {
+				edges.push([x, y]);
+			}
+		}
+		points = new_points;
+	}
+
+	points = edges;
+	for (var k = 1; k < degree; k++) {
+		var new_edges = [];
+		for (var i = 0; i < points.length; i++) {
+			var x = points[i][0];
+			var y = points[i][1];
+
+			if (x > 0) {
+				if (checked[x - 1][y] === false) {
+					checked[x - 1][y] = true;
+					if (!this.grid[x - 1][y])
+						new_edges.push([x - 1, y]);
+				}
+			}
+			if (y > 0) {
+				if (checked[x][y - 1] === false) {
+					checked[x][y - 1] = true;
+					if (!this.grid[x][y - 1])
+						new_edges.push([x, y - 1]);
+				}
+			}
+			if (x < this.sizex - 1) {
+				if (checked[x + 1][y] === false) {
+					checked[x + 1][y] = true;
+					if (!this.grid[x + 1][y])
+						new_edges.push([x + 1, y]);
+				}
+			}
+			if (y < this.sizey - 1) {
+				if (checked[x][y + 1] === false) {
+					checked[x][y + 1] = true;
+					if (!this.grid[x][y + 1])
+						new_edges.push([x, y + 1]);
+				}
+			}
+		}
+		points = new_edges;
+		edges = edges.concat(new_edges);
+	}
+
+	return edges;
+};
+
+GridSystem.prototype.is_in_bounds = function(p, w, h) {
+	// check that all points are in-bounds
+	return p[0] >= 0 && p[0] + w - 1 < this.sizex && p[1] >= 0 && p[1] + h - 1 < this.sizey;
+};
+
+GridSystem.prototype.test_rect_equals = function(p, w, h, value) {
+	// check that all points are in-bounds
+	if (p[0] < 0 || p[0] + w - 1 >= this.sizex || p[1] < 0 || p[1] + h - 1 >= this.sizey)
+		return undefined;
+
+	// iterate map values
+	for (var x = p[0]; x < p[0] + w; x++) {
+		for (var y = p[1]; y < p[1] + h; y++) {
+			if (this.grid[x][y] !== value) {
+				return false;
+			}
+		}
+	}
+
+	// return true if we didn't find a counter point
+	return true;
+};
+
+GridSystem.prototype.test_rect_contains = function(p, w, h, value) {
+	// check that all points are in-bounds
+	if (p[0] < 0 || p[0] + w - 1 >= this.sizex || p[1] < 0 || p[1] + h - 1 >= this.sizey)
+		return undefined;
+
+	// iterate map values
+	for (var x = p[0]; x < p[0] + w; x++) {
+		for (var y = p[1]; y < p[1] + h; y++) {
+			if (this.grid[x][y] === value) {
+				return true;
+			}
+		}
+	}
+
+	// return false if we didn't find a case
+	return false;
+};
+
+GridSystem.prototype.rect_set = function(p, w, h, value) {
+	// check that all points are in-bounds
+	if (p[0] < 0 || p[0] + w - 1 >= this.sizex || p[1] < 0 || p[1] + h - 1 >= this.sizey)
+		return;
+
+	// iterate map values
+	for (var x = p[0]; x < p[0] + w; x++) {
+		for (var y = p[1]; y < p[1] + h; y++) {
+			this.grid[x][y] = value;
+		}
+	}
+};
+
+
+
+
+
+
+
+
+
+
+
