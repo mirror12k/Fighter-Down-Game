@@ -167,6 +167,7 @@ GameSystem.prototype.update = function () {
 		}
 	} catch (e) {
 		console.error('exception during update:', e.message);
+		console.error('exception stack:', e.stack);
 	}
 
 	var keys = Object.keys(this.game_systems);
@@ -186,9 +187,23 @@ GameSystem.prototype.draw = function (ctx) {
 	ctx.fillRect(0, 0, 640, 480);
 
 	var entities_to_draw = this.entities.slice();
+	var game_systems_to_draw = Object.values(this.game_systems);
 	entities_to_draw.sort(function (a, b) {
 		return a.z_index - b.z_index;
 	});
+	game_systems_to_draw.sort(function (a, b) {
+		return a.z_index - b.z_index;
+	});
+
+	for (var i = 0; i < game_systems_to_draw.length; i++) {
+		if (game_systems_to_draw[i].z_index < 0) {
+			// var start = new Date().getTime(); // DEBUG_TIME
+			game_systems_to_draw[i].draw(ctx);
+			// this.debug_time.game_entity_draw_time[this.particle_systems[keys[i]].class_name] = // DEBUG_TIME
+				// (this.debug_time.game_entity_draw_time[this.particle_systems[keys[i]].class_name] || 0) + new Date().getTime() - start; // DEBUG_TIME
+		}
+	}
+
 	for (var i = 0; i < entities_to_draw.length; i++) {
 		// var start = new Date().getTime(); // DEBUG_TIME
 		entities_to_draw[i].draw(ctx);
@@ -204,12 +219,13 @@ GameSystem.prototype.draw = function (ctx) {
 			// (this.debug_time.game_entity_draw_time[this.particle_systems[keys[i]].class_name] || 0) + new Date().getTime() - start; // DEBUG_TIME
 	}
 
-	var keys = Object.keys(this.game_systems);
-	for (var i = 0; i < keys.length; i++) {
-		// var start = new Date().getTime(); // DEBUG_TIME
-		this.game_systems[keys[i]].draw(ctx);
-		// this.debug_time.game_entity_draw_time[this.particle_systems[keys[i]].class_name] = // DEBUG_TIME
-			// (this.debug_time.game_entity_draw_time[this.particle_systems[keys[i]].class_name] || 0) + new Date().getTime() - start; // DEBUG_TIME
+	for (var i = 0; i < game_systems_to_draw.length; i++) {
+		if (game_systems_to_draw[i].z_index >= 0) {
+			// var start = new Date().getTime(); // DEBUG_TIME
+			game_systems_to_draw[i].draw(ctx);
+			// this.debug_time.game_entity_draw_time[this.particle_systems[keys[i]].class_name] = // DEBUG_TIME
+				// (this.debug_time.game_entity_draw_time[this.particle_systems[keys[i]].class_name] || 0) + new Date().getTime() - start; // DEBUG_TIME
+		}
 	}
 
 	for (var i = 0; i < this.entities.length; i++) {
@@ -627,8 +643,8 @@ PathEntity.prototype.trigger_path_action = function(game) {
 			var args = this.current_action.call_system[i].args || [];
 			args = args.slice(0);
 			args.unshift(game);
-			game[this.current_action.call_system[i].system][this.current_action.call_system[i].method].apply(
-					game[this.current_action.call_system[i].system], args);
+			game.game_systems[this.current_action.call_system[i].system][this.current_action.call_system[i].method].apply(
+					game.game_systems[this.current_action.call_system[i].system], args);
 		}
 	}
 };
