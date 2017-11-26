@@ -133,7 +133,7 @@ GameSystem.prototype.step_game_frame = function(ctx) {
 	if (this.debug_time_timer >= 120) {
 		this.debug_time_timer = 0;
 		// Object.keys(this.debug_time.game_entity_draw_time).forEach(function (k) { self.debug_time.game_entity_draw_time[k] /= 120; });
-		// console.log("time: ", this.debug_time.game_entity_draw_time); // DEBUG_TIME
+		// console.log("draw time by: ", this.debug_time.game_entity_draw_time); // DEBUG_TIME
 		// console.log("frame time; update:", this.debug_time.game_update_time / 120, "draw:", this.debug_time.game_draw_time / 120); // DEBUG_TIME
 		this.debug_time.game_update_time = 0;
 		this.debug_time.game_draw_time = 0;
@@ -412,6 +412,7 @@ ParticleEffectSystem.prototype.render = function() {
 	this.buffer_canvas.width = this.particle_image.width;
 	this.buffer_canvas.height = this.particle_image.height;
 	var buffer_context = this.buffer_canvas.getContext('2d');
+	buffer_context.imageSmoothingEnabled = false;
 
 	buffer_context.fillStyle = this.fill_style;
 	buffer_context.fillRect(0,0, this.buffer_canvas.width, this.buffer_canvas.height);
@@ -1003,4 +1004,40 @@ GridSystem.prototype.rect_set = function(p, w, h, value) {
 
 
 
+
+
+function RenderedGridSystem (game, sizex, sizey, width, height) {
+	GridSystem.call(this, game, sizex, sizey, width, height);
+	this.rendered_grid = this.render();
+}
+RenderedGridSystem.prototype = Object.create(GridSystem.prototype);
+RenderedGridSystem.prototype.class_name = 'RenderedGridSystem';
+RenderedGridSystem.prototype.draw = function(ctx) {
+	ctx.drawImage(this.rendered_grid, 0, 0, this.rendered_grid.width, this.rendered_grid.height);
+};
+
+RenderedGridSystem.prototype.render = function() {
+	var buffer_canvas = document.createElement('canvas');
+	buffer_canvas.width = this.width * this.sizex;
+	buffer_canvas.height = this.height * this.sizey;
+
+	var buffer_context = buffer_canvas.getContext('2d');
+	buffer_context.imageSmoothingEnabled = false;
+
+	this.render_rect(buffer_context, [0, 0], this.sizex, this.sizey);
+
+	return buffer_canvas;
+};
+
+RenderedGridSystem.prototype.rect_set = function(p, w, h, value) {
+	GridSystem.prototype.rect_set.call(this, p, w, h, value);
+	this.update_render(p, w, h);
+};
+RenderedGridSystem.prototype.update_render = function(p, w, h) {
+	if (this.is_in_bounds(p, w, h)) {
+		var buffer_context = this.rendered_grid.getContext('2d');
+		buffer_context.imageSmoothingEnabled = false;
+		this.render_rect(buffer_context, p, w, h);
+	}
+};
 
