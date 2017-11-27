@@ -55,6 +55,7 @@ function point_angle(fromx, fromy, tox, toy) {
 
 function GameSystem(canvas, images) {
 	this.canvas = canvas;
+	canvas.game_system = this;
 	this.images = images;
 
 	this.entities = [];
@@ -407,6 +408,10 @@ function ParticleEffectSystem(game, config) {
 	// this.frame_width = 8;
 	// this.max_frame = config.max_frame || (this.width / this.frame_width);
 	this.max_frame = config.max_frame || (this.particle_image.width / this.width);
+	this.frame_step = config.frame_step || 0;
+
+	this.particle_sx = config.particle_sx || 0;
+	this.particle_sy = config.particle_sy || 0;
 
 	this.particle_width = config.particle_width || config.particle_size || 16;
 	this.particle_height = config.particle_height || config.particle_size || 16;
@@ -414,31 +419,35 @@ function ParticleEffectSystem(game, config) {
 	this.particle_deflate = config.particle_deflate;
 	this.particle_longevity = config.particle_longevity || 0.05;
 	this.particle_respawn = config.particle_respawn || 0;
+	this.particle_base_timer = config.particle_base_timer || 4;
+	this.particle_max_timer = config.particle_max_timer || 0;
+
 	this.dynamic_images = config.dynamic_images;
 	this.static_images = config.static_images;
 
 	if (this.fill_style !== undefined && !this.dynamic_images && !this.static_images)
-		this.render();
+		this.particle_image = this.render();
 }
 ParticleEffectSystem.prototype = Object.create(ScreenEntity.prototype);
 ParticleEffectSystem.prototype.constructor = ParticleEffectSystem;
 ParticleEffectSystem.prototype.class_name = 'ParticleEffectSystem';
 ParticleEffectSystem.prototype.render = function() {
-	this.buffer_canvas = document.createElement('canvas');
-	this.buffer_canvas.width = this.particle_image.width;
-	this.buffer_canvas.height = this.particle_image.height;
-	var buffer_context = this.buffer_canvas.getContext('2d');
+	var buffer_canvas = document.createElement('canvas');
+	buffer_canvas.width = this.particle_image.width;
+	buffer_canvas.height = this.particle_image.height;
+	var buffer_context = buffer_canvas.getContext('2d');
 	buffer_context.imageSmoothingEnabled = false;
 
 	buffer_context.fillStyle = this.fill_style;
-	buffer_context.fillRect(0,0, this.buffer_canvas.width, this.buffer_canvas.height);
+	buffer_context.fillRect(0,0, buffer_canvas.width, buffer_canvas.height);
 
 	buffer_context.globalCompositeOperation = "destination-atop";
 	buffer_context.drawImage(this.particle_image, 0,0);
+	return buffer_canvas;
 };
 ParticleEffectSystem.prototype.add_particle = function(px, py, speed, frame, angle) {
-	var sx = ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
-	var sy = ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
+	var sx = this.particle_sx + ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
+	var sy = this.particle_sy + ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
 
 	if (angle === undefined)
 		angle = Math.random() * 360;
@@ -458,12 +467,13 @@ ParticleEffectSystem.prototype.add_particle = function(px, py, speed, frame, ang
 		sr: Math.random() - 0.5,
 		angle: angle,
 		frame: frame,
-		timer: 4,
+		timer: this.particle_base_timer,
+		// timer: this.particle_base_timer + Math.floor(Math.random() * (this.particle_max_timer - this.particle_base_timer + 1)),
 	});
 };
 ParticleEffectSystem.prototype.add_image_particle = function(image, width, height, px, py, speed) {
-	var sx = ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
-	var sy = ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
+	var sx = this.particle_sx + ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
+	var sy = this.particle_sy + ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
 
 	var sourcex = image.width * (Math.random() * 0.5);
 	var sourcey = image.height * (Math.random() * 0.5);
@@ -493,6 +503,8 @@ ParticleEffectSystem.prototype.update = function(game) {
 		this.particles[i].px += this.particles[i].sx;
 		this.particles[i].py += this.particles[i].sy;
 		this.particles[i].angle += this.particles[i].sr;
+		if (this.frame_step)
+			this.particles[i].frame = (this.particles[i].frame + this.frame_step) % this.max_frame;
 
 		if (Math.random() < this.particle_longevity) {
 			if (this.static_images) {
@@ -541,14 +553,14 @@ ParticleEffectSystem.prototype.draw = function(ctx) {
 					p.sourcex, p.sourcey, p.width, p.height,
 					// this.width * p.frame, 0, this.width, this.height,
 					0 - p.width / 2, 0 - p.height / 2, p.width, p.height);
-			} else if (this.static_images) {
-				ctx.drawImage(this.particle_image, 
-					this.width * p.frame, 0, this.width, this.height,
-					0 - width / 2, 0 - height / 2, width, height);
-			} else if (this.fill_style !== undefined) {
-				ctx.drawImage(this.buffer_canvas, 
-					this.width * p.frame, 0, this.width, this.height,
-					0 - width / 2, 0 - height / 2, width, height);
+			// } else if (this.static_images) {
+			// 	ctx.drawImage(this.particle_image, 
+			// 		this.width * p.frame, 0, this.width, this.height,
+			// 		0 - width / 2, 0 - height / 2, width, height);
+			// } else if (this.fill_style !== undefined) {
+			// 	ctx.drawImage(this.buffer_canvas, 
+			// 		this.width * p.frame, 0, this.width, this.height,
+			// 		0 - width / 2, 0 - height / 2, width, height);
 			} else {
 				ctx.drawImage(this.particle_image, 
 					this.width * p.frame, 0, this.width, this.height,
@@ -571,6 +583,8 @@ function PathEntity(game, px, py, width, height, image, path) {
 	ScreenEntity.call(this, game, px, py, width, height, image);
 
 	// console.log('debug path: ', path);
+	this.loop_path = false;
+
 	this.path = path;
 	this.path_index = 0;
 	this.current_action = undefined;
@@ -578,73 +592,89 @@ function PathEntity(game, px, py, width, height, image, path) {
 PathEntity.prototype = Object.create(ScreenEntity.prototype);
 PathEntity.prototype.constructor = PathEntity;
 PathEntity.prototype.class_name = 'PathEntity';
-PathEntity.prototype.trigger_path_action = function(game) {
-	if (this.current_action.delete !== undefined) {
+PathEntity.prototype.trigger_path_action = function(game, action) {
+	if (action.delete !== undefined) {
 		game.entities_to_remove.push(this);
 	}
 
-	if (this.current_action.px !== undefined) {
-		if (this.current_action.timeout !== undefined) {
-			this.current_action.sx = (this.current_action.px - this.px) / this.current_action.timeout;
-			this.current_action.sy = (this.current_action.py - this.py) / this.current_action.timeout;
-			this.timer = this.current_action.timeout;
+	if (action.px !== undefined) {
+		if (action.timeout !== undefined) {
+			action.sx = (action.px - this.px) / action.timeout;
+			action.sy = (action.py - this.py) / action.timeout;
+			this.timer = action.timeout;
 		} else {
-			var dist = ((this.current_action.px - this.px) ** 2 + (this.current_action.py - this.py) ** 2) ** 0.5;
-			var normalx = (this.current_action.px - this.px) / dist;
-			var normaly = (this.current_action.py - this.py) / dist;
-			this.current_action.sx = normalx * this.current_action.speed;
-			this.current_action.sy = normaly * this.current_action.speed;
-			this.timer = dist / this.current_action.speed;
+			var dist = ((action.px - this.px) ** 2 + (action.py - this.py) ** 2) ** 0.5;
+			var normalx = (action.px - this.px) / dist;
+			var normaly = (action.py - this.py) / dist;
+			action.sx = normalx * action.speed;
+			action.sy = normaly * action.speed;
+			this.timer = dist / action.speed;
 		}
 	} else {
-		if (this.current_action.angle !== undefined) {
-			this.angle = this.current_action.angle;
-			if (this.current_action.speed !== undefined) {
-				this.current_action.sx = Math.cos(this.current_action.angle / 180 * Math.PI) * this.current_action.speed;
-				this.current_action.sy = Math.sin(this.current_action.angle / 180 * Math.PI) * this.current_action.speed;
+		if (action.angle !== undefined) {
+			this.angle = action.angle;
+			if (action.speed !== undefined) {
+				action.sx = Math.cos(action.angle / 180 * Math.PI) * action.speed;
+				action.sy = Math.sin(action.angle / 180 * Math.PI) * action.speed;
 			}
 		}
 
-		if (this.current_action.timeout !== undefined) {
-			this.timer = this.current_action.timeout;
+		if (action.timeout !== undefined) {
+			this.timer = action.timeout;
 		} else {
 			this.timer = undefined;
 		}
 	}
 
 
-	if (this.current_action.sx === undefined)
-		this.current_action.sx = 0;
-	if (this.current_action.sy === undefined)
-		this.current_action.sy = 0;
+	if (action.sx === undefined)
+		action.sx = 0;
+	if (action.sy === undefined)
+		action.sy = 0;
 
 
 
-	if (this.current_action.spawn) {
-		for (var i = 0; i < this.current_action.spawn.length; i++) {
-			// console.log("debug path: ", this.current_action.spawn[i].path);
-			var bullet = new EnemyBullet(game, this.px, this.py, this.current_action.spawn[i].path, this.current_action.spawn[i].image);
+	if (action.spawn) {
+		for (var i = 0; i < action.spawn.length; i++) {
+			// console.log("debug path: ", action.spawn[i].path);
+			var bullet = new EnemyBullet(game, this.px, this.py, action.spawn[i].path, action.spawn[i].image);
 			bullet.angle = this.angle;
 			game.entities_to_add.push(bullet);
 		}
 	}
 
-	if (this.current_action.call) {
-		for (var i = 0; i < this.current_action.call.length; i++) {
-			var args = this.current_action.call[i].args || [];
-			args = args.slice(0);
+	if (action.spawn_entity) {
+		for (var i = 0; i < action.spawn_entity.length; i++) {
+			// console.log("debug path: ", action.spawn_entity[i].path);
+			var instruction = action.spawn_entity[i];
+
+			var args = instruction.args.slice();
+			args.unshift(this.py + (instruction.py || 0));
+			args.unshift(this.px + (instruction.px || 0));
 			args.unshift(game);
-			this[this.current_action.call[i].method].apply(this, args);
+
+			var object = Object.create(instruction.class.prototype);
+			instruction.class.apply(object, args);
+			game.entities_to_add.push(object);
 		}
 	}
 
-	if (this.current_action.call_system) {
-		for (var i = 0; i < this.current_action.call_system.length; i++) {
-			var args = this.current_action.call_system[i].args || [];
+	if (action.call) {
+		for (var i = 0; i < action.call.length; i++) {
+			var args = action.call[i].args || [];
 			args = args.slice(0);
 			args.unshift(game);
-			game.game_systems[this.current_action.call_system[i].system][this.current_action.call_system[i].method].apply(
-					game.game_systems[this.current_action.call_system[i].system], args);
+			this[action.call[i].method].apply(this, args);
+		}
+	}
+
+	if (action.call_system) {
+		for (var i = 0; i < action.call_system.length; i++) {
+			var args = action.call_system[i].args || [];
+			args = args.slice(0);
+			args.unshift(game);
+			game.game_systems[action.call_system[i].system][action.call_system[i].method].apply(
+					game.game_systems[action.call_system[i].system], args);
 		}
 	}
 };
@@ -656,7 +686,12 @@ PathEntity.prototype.update = function(game) {
 		if (this.path.length > this.path_index) {
 			this.current_action = this.path[this.path_index];
 			this.path_index++;
-			this.trigger_path_action(game);
+			this.trigger_path_action(game, this.current_action);
+		} else if (this.loop_path) {
+			this.path_index = 0;
+			this.current_action = this.path[this.path_index];
+			this.path_index++;
+			this.trigger_path_action(game, this.current_action);
 		} else {
 			game.entities_to_remove.push(this);
 		}
@@ -686,7 +721,7 @@ PathEntity.prototype.update = function(game) {
 				if (this.current_action.repeat !== undefined && this.current_action.repeat > 1) {
 					this.current_action.repeat--;
 					this.timer = this.current_action.timeout;
-					this.trigger_path_action(game);
+					this.trigger_path_action(game, this.current_action);
 				} else {
 					this.current_action = undefined;
 				}
