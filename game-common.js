@@ -65,6 +65,7 @@ function GameSystem(canvas, images) {
 	this.game_systems = {};
 	this.particle_systems = {};
 
+	this.background_color = '#000';
 
 	this.debug_time = { game_update_time: 0, game_draw_time: 0, game_entity_draw_time: {}, };
 	this.debug_time_timer = 0;
@@ -184,7 +185,7 @@ GameSystem.prototype.update = function () {
 GameSystem.prototype.draw = function (ctx) {
 	ctx.clearRect(0, 0, 640, 480);
 
-	ctx.fillStyle = 'rgb(0, 0, 0)';
+	ctx.fillStyle = this.background_color;
 	ctx.fillRect(0, 0, 640, 480);
 
 	var entities_to_draw = this.entities.slice();
