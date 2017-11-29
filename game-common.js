@@ -433,8 +433,8 @@ function ParticleEffectSystem(game, config) {
 	this.max_frame = config.max_frame || (this.particle_image.width / this.width);
 	this.frame_step = config.frame_step || 0;
 
-	this.particle_sx = config.particle_sx || 0;
-	this.particle_sy = config.particle_sy || 0;
+	this.particle_windx = config.particle_windx || 0;
+	this.particle_windy = config.particle_windy || 0;
 
 	this.particle_width = config.particle_width || config.particle_size || 16;
 	this.particle_height = config.particle_height || config.particle_size || 16;
@@ -448,7 +448,7 @@ function ParticleEffectSystem(game, config) {
 	this.dynamic_images = config.dynamic_images;
 	this.static_images = config.static_images;
 
-	if (this.fill_style !== undefined && !this.dynamic_images && !this.static_images)
+	if (this.fill_style !== undefined)
 		this.particle_image = this.render();
 }
 ParticleEffectSystem.prototype = Object.create(ScreenEntity.prototype);
@@ -469,8 +469,8 @@ ParticleEffectSystem.prototype.render = function() {
 	return buffer_canvas;
 };
 ParticleEffectSystem.prototype.add_particle = function(px, py, speed, frame, angle) {
-	var sx = this.particle_sx + ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
-	var sy = this.particle_sy + ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
+	var sx = ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
+	var sy = ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
 
 	if (angle === undefined)
 		angle = Math.random() * 360;
@@ -495,8 +495,8 @@ ParticleEffectSystem.prototype.add_particle = function(px, py, speed, frame, ang
 	});
 };
 ParticleEffectSystem.prototype.add_image_particle = function(image, width, height, px, py, speed) {
-	var sx = this.particle_sx + ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
-	var sy = this.particle_sy + ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
+	var sx = ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
+	var sy = ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
 
 	var sourcex = image.width * (Math.random() * 0.5);
 	var sourcey = image.height * (Math.random() * 0.5);
@@ -523,6 +523,8 @@ ParticleEffectSystem.prototype.add_image_particle = function(image, width, heigh
 };
 ParticleEffectSystem.prototype.update = function(game) {
 	for (var i = this.particles.length - 1; i >= 0; i--) {
+		this.particles[i].sx += this.particle_windx;
+		this.particles[i].sy += this.particle_windy;
 		this.particles[i].px += this.particles[i].sx;
 		this.particles[i].py += this.particles[i].sy;
 		this.particles[i].angle += this.particles[i].sr;
