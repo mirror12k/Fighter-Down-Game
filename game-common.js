@@ -152,6 +152,8 @@ GameSystem.prototype.step_game_frame = function(ctx) {
 };
 GameSystem.prototype.update = function () {
 
+	this.context_container = undefined;
+
 	for (var i = 0; i < this.entities_to_remove.length; i++) {
 		var index = this.entities.indexOf(this.entities_to_remove[i]);
 		if (index >= 0)
@@ -174,8 +176,11 @@ GameSystem.prototype.update = function () {
 
 	var keys = Object.keys(this.game_systems);
 	for (var i = 0; i < keys.length; i++) {
+		this.context_container = this.game_systems[keys[i]];
 		this.game_systems[keys[i]].update(this);
 	}
+
+	this.context_container = undefined;
 
 	var keys = Object.keys(this.particle_systems);
 	for (var i = 0; i < keys.length; i++) {
@@ -232,6 +237,14 @@ GameSystem.prototype.draw = function (ctx) {
 
 	for (var i = 0; i < this.entities.length; i++) {
 		this.entities[i].draw_ui(ctx);
+	}
+};
+
+GameSystem.prototype.remove_entity = function(ent) {
+	if (this.context_container === undefined) {
+		this.entities_to_remove.push(ent);
+	} else {
+		this.context_container.remove_entity(ent);
 	}
 };
 
@@ -300,8 +313,11 @@ function Entity(game) {
 Entity.prototype.class_name = 'Entity';
 Entity.prototype.z_index = 0;
 Entity.prototype.update = function(game) {
-	for (var i = 0; i < this.sub_entities.length; i++) {
+	for (var i = this.sub_entities.length - 1; i >= 0; i--) {
 		this.sub_entities[i].update(game);
+	}
+	for (var i = this.ui_entities.length - 1; i >= 0; i--) {
+		this.ui_entities[i].update(game);
 	}
 	for (var i = this.entity_tags.length - 1; i >= 0; i--) {
 		if (this.entity_tags[i].timer !== undefined) {
@@ -333,6 +349,12 @@ Entity.prototype.get_tag = function(type) {
 		}
 	}
 	return undefined;
+};
+Entity.prototype.remove_entity = function(ent) {
+	var index = this.sub_entities.indexOf(ent);
+	if (indexOf !== -1) {
+		this.sub_entities.splice(index, 1);
+	}
 };
 
 function ScreenEntity(game, px, py, width, height, image) {
@@ -832,11 +854,11 @@ DebugSystem.prototype.draw_debug_ray = function(ctx, ray) {
 	ctx.stroke();
 };
 DebugSystem.prototype.draw_debug_square = function(ctx, square) {
-	ctx.strokeStyle = square.color || '#f00';
-	ctx.lineWidth = 2;
+	ctx.strokeStyle = square.color;
+	ctx.lineWidth = square.thickness;
 	
 	ctx.beginPath();
-	var width = square.width || 10;
+	var width = square.width;
 	ctx.rect(square.pxy.px - width / 2, square.pxy.py - width / 2, width, width);
 	
 	ctx.stroke();
@@ -860,9 +882,9 @@ DebugSystem.prototype.add_debug_ray = function(start, end, color, thickness) {
 DebugSystem.prototype.add_debug_square = function(pxy, width, color, thickness) {
 	this.next_debug_squares.push({
 		pxy: pxy,
-		width: width,
-		color: color,
-		thickness: thickness,
+		width: width || 10,
+		color: color || '#f00',
+		thickness: thickness || 1,
 	});
 };
 
