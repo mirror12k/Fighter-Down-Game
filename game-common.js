@@ -53,6 +53,136 @@ function point_angle(fromx, fromy, tox, toy) {
 	return angle / Math.PI * 180;
 }
 
+var image_lib = {
+
+	// renders a canvas with the given image textured by the texture
+	image_render_textured: function (image, texture, offsetx, offsety, alpha) {
+		var buffer_canvas = document.createElement('canvas');
+		buffer_canvas.width = image.width;
+		buffer_canvas.height = image.height;
+		var buffer_context = buffer_canvas.getContext('2d');
+		buffer_context.imageSmoothingEnabled = false;
+
+		if (offsetx === 0 && offsety === 0) {
+			buffer_context.drawImage(texture, 0, 0, image.width, image.height);
+			
+		} else {
+			buffer_context.drawImage(texture, offsetx, offsety, image.width, image.height);
+			buffer_context.drawImage(texture, offsetx - image.width, offsety, image.width, image.height);
+			buffer_context.drawImage(texture, offsetx, offsety - image.height, image.width, image.height);
+			buffer_context.drawImage(texture, offsetx - image.width, offsety - image.height, image.width, image.height);
+		}
+
+		buffer_context.globalCompositeOperation = "destination-in";
+		buffer_context.drawImage(image, 0,0);
+		buffer_context.globalCompositeOperation = "source-over";
+		buffer_context.globalAlpha = alpha;
+		buffer_context.drawImage(image, 0,0);
+		return buffer_canvas;
+	},
+
+	// converts all pixel colors in the image to the given fill style
+	image_colorize: function  (image, fill_style) {
+		var buffer_canvas = document.createElement('canvas');
+		buffer_canvas.width = image.width;
+		buffer_canvas.height = image.height;
+		var buffer_context = buffer_canvas.getContext('2d');
+		buffer_context.imageSmoothingEnabled = false;
+
+		buffer_context.fillStyle = fill_style;
+		buffer_context.fillRect(0,0, buffer_canvas.width, buffer_canvas.height);
+
+		buffer_context.globalCompositeOperation = "destination-atop";
+		buffer_context.drawImage(image, 0, 0);
+
+		return buffer_canvas;
+	},
+
+	// adds an outline to the image
+	image_outline: function (image, outline_style) {
+		var buffer_canvas = document.createElement('canvas');
+		buffer_canvas.width = image.width + 2;
+		buffer_canvas.height = image.height + 2;
+		var buffer_context = buffer_canvas.getContext('2d');
+		buffer_context.imageSmoothingEnabled = false;
+
+		var colored_image = image_colorize(image, outline_style);
+
+		buffer_context.translate(1, 1);
+		buffer_context.drawImage(colored_image, -1, 0, image.width, image.height);
+		buffer_context.drawImage(colored_image, 0, -1, image.width, image.height);
+		buffer_context.drawImage(colored_image, 1, 0, image.width, image.height);
+		buffer_context.drawImage(colored_image, 0, 1, image.width, image.height);
+
+		return buffer_canvas;
+	},
+
+	// draws the top_image atop the bottom_image
+	image_composite: function (bottom_image, top_image) {
+		var buffer_canvas = document.createElement('canvas');
+		buffer_canvas.width = bottom_image.width;
+		buffer_canvas.height = bottom_image.height;
+		var buffer_context = buffer_canvas.getContext('2d');
+		buffer_context.imageSmoothingEnabled = false;
+
+		buffer_context.drawImage(bottom_image, 0, 0, bottom_image.width, bottom_image.height);
+		buffer_context.drawImage(top_image, bottom_image.width / 2 - top_image.width / 2, bottom_image.height / 2 - top_image.height / 2,
+				top_image.width, top_image.height);
+
+		return buffer_canvas;
+	},
+
+	// chops the image using the mask as a guide
+	image_chop: function (image, mask, offsetx, offsety, maskw, maskh) {
+		var buffer_canvas = document.createElement('canvas');
+		buffer_canvas.width = maskw || mask.width;
+		buffer_canvas.height = maskh || mask.height;
+		var buffer_context = buffer_canvas.getContext('2d');
+		buffer_context.imageSmoothingEnabled = false;
+
+		buffer_context.save();
+		buffer_context.translate(-offsetx, -offsety);
+		buffer_context.drawImage(image, 0, 0, image.width, image.height);
+		buffer_context.restore();
+		buffer_context.globalCompositeOperation = 'destination-in';
+		buffer_context.drawImage(mask, 0, 0, maskw || mask.width, maskh || mask.height);
+
+		return buffer_canvas;
+	},
+
+
+	// flip an image across the y-axis
+	image_flip_horizontal: function (image) {
+		var buffer_canvas = document.createElement('canvas');
+		buffer_canvas.width = image.width;
+		buffer_canvas.height = image.height;
+		var buffer_context = buffer_canvas.getContext('2d');
+		buffer_context.imageSmoothingEnabled = false;
+
+		buffer_context.translate(image.width, 0);
+		buffer_context.scale(-1, 1);
+		buffer_context.drawImage(image, 0, 0);
+
+		return buffer_canvas;
+	},
+
+	// flip an image across the x-axis
+	image_flip_vertical: function (image) {
+		var buffer_canvas = document.createElement('canvas');
+		buffer_canvas.width = image.width;
+		buffer_canvas.height = image.height;
+		var buffer_context = buffer_canvas.getContext('2d');
+		buffer_context.imageSmoothingEnabled = false;
+
+		buffer_context.translate(image.width, 0);
+		buffer_context.scale(1, -1);
+		buffer_context.drawImage(image, 0, 0);
+
+		return buffer_canvas;
+	},
+};
+
+
 function GameSystem(canvas, images) {
 	this.canvas = canvas;
 	canvas.game_system = this;
