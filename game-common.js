@@ -350,9 +350,15 @@ Entity.prototype.get_tag = function(type) {
 	}
 	return undefined;
 };
+Entity.prototype.remove_tag = function(tag) {
+	var index = this.entity_tags.indexOf(tag);
+	if (index !== -1) {
+		this.entity_tags.splice(index, 1);
+	}
+};
 Entity.prototype.remove_entity = function(ent) {
 	var index = this.sub_entities.indexOf(ent);
-	if (indexOf !== -1) {
+	if (index !== -1) {
 		this.sub_entities.splice(index, 1);
 	}
 };
