@@ -417,7 +417,21 @@ GameSystem.prototype.find_near = function(me, type, dist) {
 	return found;
 };
 
-GameSystem.prototype.find_colliding = function(me, type, dist) {
+GameSystem.prototype.find_colliding_rectangular = function(me, type) {
+	var found = [];
+	for (var i = 0; i < this.entities.length; i++) {
+		var ent = this.entities[i];
+		if (ent instanceof type) {
+			if (Math.abs(ent.px - me.px) < (ent.width + me.width) / 2 && Math.abs(ent.py - me.py) < (ent.height + me.height) / 2) {
+				found.push(ent);
+			}
+		}
+	}
+
+	return found;
+};
+
+GameSystem.prototype.find_colliding_circular = function(me, type, dist) {
 	var found = [];
 	for (var i = 0; i < this.entities.length; i++) {
 		var ent = this.entities[i];
@@ -433,7 +447,7 @@ GameSystem.prototype.find_colliding = function(me, type, dist) {
 	return found;
 };
 
-GameSystem.prototype.find_colliding_nested = function(me, group_type, type, dist) {
+GameSystem.prototype.find_colliding_circular_nested = function(me, group_type, type, dist) {
 	var found = [];
 	for (var i = 0; i < this.entities.length; i++) {
 		var ent = this.entities[i];
@@ -890,8 +904,10 @@ PathEntity.prototype.update = function(game) {
 		if (this.current_action.da !== undefined) {
 			this.current_action.angle += this.current_action.da;
 			this.angle = this.current_action.angle;
-			this.current_action.sx = Math.cos(this.current_action.angle / 180 * Math.PI) * this.current_action.speed;
-			this.current_action.sy = Math.sin(this.current_action.angle / 180 * Math.PI) * this.current_action.speed;
+			if (this.current_action.speed) {
+				this.current_action.sx = Math.cos(this.current_action.angle / 180 * Math.PI) * this.current_action.speed;
+				this.current_action.sy = Math.sin(this.current_action.angle / 180 * Math.PI) * this.current_action.speed;
+			}
 		}
 
 		if (this.current_action.trail) {
@@ -927,8 +943,17 @@ function CollidingEntity(game, px, py, width, height, image, path) {
 CollidingEntity.prototype = Object.create(PathEntity.prototype);
 CollidingEntity.prototype.constructor = CollidingEntity;
 CollidingEntity.prototype.class_name = 'CollidingEntity';
-CollidingEntity.prototype.collision_radius = 10;
+CollidingEntity.prototype.collision_radius = 10; // used for circular collision checking
 CollidingEntity.prototype.collision_map = [];
+// // example collision map property
+// CollidingEntity.prototype.collision_map = [
+// 	{
+// 		// rectangular_collision: true, // set to true if we need to check box-collisions (no rotation), otherwise circular collision is used
+// 		class: EnemyEntity, // class we are checking for collision against
+// 		// container_class: EnemyContainer, // optional class containing the entity we are looking for
+// 		callback: 'on_hit', // our callback method name, recieves arguments (game, other)
+// 	},
+// ];
 
 CollidingEntity.prototype.update = function(game) {
 	PathEntity.prototype.update.call(this, game);
@@ -938,10 +963,12 @@ CollidingEntity.prototype.check_collision = function(game) {
 	for (var i = 0; i < this.collision_map.length; i++) {
 		// console.log("debug: ", this.collision_radius + this.collision_map[i].class.prototype.collision_radius);
 		var colliding;
-		if (this.collision_map[i].container_class)
-			colliding = game.find_colliding_nested(this, this.collision_map[i].container_class, this.collision_map[i].class, this.collision_radius);
+		if (this.collision_map[i].rectangular_collision)
+			colliding = game.find_colliding_rectangular(this, this.collision_map[i].class);
+		else if (this.collision_map[i].container_class)
+			colliding = game.find_colliding_circular_nested(this, this.collision_map[i].container_class, this.collision_map[i].class, this.collision_radius);
 		else
-			colliding = game.find_colliding(this, this.collision_map[i].class, this.collision_radius);
+			colliding = game.find_colliding_circular(this, this.collision_map[i].class, this.collision_radius);
 		// var colliding = game.find_near_dynamic(this, this.collision_map[i].class, this.collision_radius);
 		for (var k = 0; k < colliding.length; k++) {
 			this[this.collision_map[i].callback](game, colliding[k]);
