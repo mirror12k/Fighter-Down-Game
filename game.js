@@ -542,40 +542,41 @@ function main () {
 	ctx.imageSmoothingEnabled = false;
 
 
+	var assets = {
+		images: {
+			fighter: "fighter.png",
+			mini_fighter: "mini_fighter.png",
+			fighter_attack_formation: "fighter_attack_formation.png",
+			fighter_transform_animation: "fighter_transform_animation.png",
+			ufo: "ufo.png",
+			ufo_small: "ufo_small.png",
+			ufo_corsair: "ufo_corsair.png",
 
-	var images = {
-		fighter: "fighter.png",
-		mini_fighter: "mini_fighter.png",
-		fighter_attack_formation: "fighter_attack_formation.png",
-		fighter_transform_animation: "fighter_transform_animation.png",
-		ufo: "ufo.png",
-		ufo_small: "ufo_small.png",
-		ufo_corsair: "ufo_corsair.png",
+			red_streak_bullet: "red_streak_bullet.png",
+			bright_purple_square_bullet: "bright_purple_square_bullet.png",
+			purple_square_bullet: "purple_square_bullet.png",
+			orange_round_bullet: "orange_round_bullet.png",
+			// enemy_bullet_orange: "enemy_bullet_orange.png",
+			// enemy_bullet_overlay_effect: "enemy_bullet_overlay_effect.png",
+			purple_crystal: "purple_crystal.png",
+			particle_effect_generic: "particle_effect_generic.png",
+			particle_effect_explosion: "particle_effect_explosion.png",
 
-		red_streak_bullet: "red_streak_bullet.png",
-		bright_purple_square_bullet: "bright_purple_square_bullet.png",
-		purple_square_bullet: "purple_square_bullet.png",
-		orange_round_bullet: "orange_round_bullet.png",
-		// enemy_bullet_orange: "enemy_bullet_orange.png",
-		// enemy_bullet_overlay_effect: "enemy_bullet_overlay_effect.png",
-		purple_crystal: "purple_crystal.png",
-		particle_effect_generic: "particle_effect_generic.png",
-		particle_effect_explosion: "particle_effect_explosion.png",
+			asteroid_64: "asteroid_64.png",
 
-		asteroid_64: "asteroid_64.png",
+			platform_core: "platform_core.png",
+			platform_sections: "platform_sections.png",
 
-		platform_core: "platform_core.png",
-		platform_sections: "platform_sections.png",
-
-		ufo_station_core: "ufo_station_core.png",
-		ufo_station_pylon: "ufo_station_pylon.png",
-		ufo_station_pylon2: "ufo_station_pylon2.png",
+			ufo_station_core: "ufo_station_core.png",
+			ufo_station_pylon: "ufo_station_pylon.png",
+			ufo_station_pylon2: "ufo_station_pylon2.png",
+		},
 	};
 
-	load_all_images(images, function () {
-		console.log("all images loaded");
+	load_all_assets(assets, function (loaded_assets) {
+		console.log("all assets loaded");
 
-		var game = new GameSystem(canvas, images);
+		var game = new GameSystem(canvas, loaded_assets);
 
 		game.entities.push(new PlayerShip(game, 320, 240));
 

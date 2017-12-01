@@ -1,11 +1,26 @@
 
-function load_image (url, callback) {
+function load_image(url, callback) {
 	var image = new Image();
-	image.onload = callback.bind(undefined, image);
+	image.addEventListener('load', callback.bind(undefined, image));
+	image.addEventListener('error', function (e) {
+		console.log("error loading image:", image, e);
+	});
+	// image.onload = callback.bind(undefined, image);
 	image.src = url;
 }
+function load_audio(url, callback) {
+	var audio = new Audio();
+	audio.addEventListener('canplaythrough', callback.bind(undefined, audio));
+	audio.addEventListener('error', function (e) {
+		console.log("error loading audio:", audio, e);
+	});
+	audio.preload = "auto";
+	audio.src = url;
+	audio.load();
+	// audio.play();
+}
 
-function load_all_images (images, callback) {
+function load_all_images(images, callback) {
 	var keys = Object.keys(images);
 	var count_loaded = 0;
 	for (var i = 0; i < keys.length; i++) {
@@ -16,6 +31,51 @@ function load_all_images (images, callback) {
 			if (count_loaded === keys.length)
 				callback();
 		}).bind(undefined, keys[i]));
+	}
+}
+
+function load_all_assets(assets, callback) {
+	var images = assets.images;
+	var audio = assets.audio;
+
+	var loaded_assets = {
+		images: {},
+		audio: {},
+	};
+	var count_loaded = 0;
+	var count_expected = 0;
+	if (images) {
+		count_expected += Object.keys(images).length;
+	}
+	if (audio) {
+		count_expected += Object.keys(audio).length;
+	}
+
+	if (images) {
+		var keys = Object.keys(images);
+		for (var i = 0; i < keys.length; i++) {
+			load_image(images[keys[i]], (function (key, image) {
+				// console.log("loaded image:", image);
+				loaded_assets.images[key] = image;
+
+				count_loaded++;
+				if (count_loaded >= count_expected)
+					callback(loaded_assets);
+			}).bind(undefined, keys[i]));
+		}
+	}
+	if (audio) {
+		var keys = Object.keys(audio);
+		for (var i = 0; i < keys.length; i++) {
+			load_audio(audio[keys[i]], (function (key, audio_data) {
+				// console.log("loaded audio:", audio_data);
+				loaded_assets.audio[key] = audio_data;
+
+				count_loaded++;
+				if (count_loaded >= count_expected)
+					callback(loaded_assets);
+			}).bind(undefined, keys[i]));
+		}
 	}
 }
 
@@ -183,10 +243,11 @@ var image_lib = {
 };
 
 
-function GameSystem(canvas, images) {
+function GameSystem(canvas, assets) {
 	this.canvas = canvas;
 	canvas.game_system = this;
-	this.images = images;
+	this.images = assets.images;
+	this.audio = assets.audio;
 
 	this.entities = [];
 	this.entities_to_add = [];
@@ -1279,7 +1340,7 @@ GridSystem.prototype.rect_set = function(p, w, h, value) {
 
 
 
-function RenderedGridSystem (game, sizex, sizey, width, height) {
+function RenderedGridSystem(game, sizex, sizey, width, height) {
 	GridSystem.call(this, game, sizex, sizey, width, height);
 	this.rendered_grid = this.prepare_buffer();
 }
