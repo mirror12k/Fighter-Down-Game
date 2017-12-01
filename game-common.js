@@ -433,6 +433,28 @@ GameSystem.prototype.find_colliding = function(me, type, dist) {
 	return found;
 };
 
+GameSystem.prototype.find_colliding_nested = function(me, group_type, type, dist) {
+	var found = [];
+	for (var i = 0; i < this.entities.length; i++) {
+		var ent = this.entities[i];
+		if (ent instanceof group_type) {
+			for (var k = 0; k < ent.sub_entities.length; k++) {
+				var ent_sub = ent.sub_entities[k];
+				var offset = d2_point_offset(ent.angle, ent_sub.px, ent_sub.py);
+
+				var hit_radius = dist + ent_sub.collision_radius;
+				var p = { px: ent.px + offset.px, py: ent.py + offset.py };
+				if (Math.abs(p.px - me.px) < hit_radius && Math.abs(p.py - me.py) < hit_radius &&
+					Math.pow(Math.pow(p.px - me.px, 2) + Math.pow(p.py - me.py, 2), 0.5) < hit_radius) {
+					found.push(p);
+				}
+			}
+		}
+	}
+
+	return found;
+};
+
 
 function Entity(game) {
 	this.sub_entities = [];
@@ -530,9 +552,11 @@ ScreenEntity.prototype.draw = function(ctx) {
 				this.sub_entities[i].draw(ctx);
 		}
 
-		ctx.drawImage(this.image,
-			this.frame * (this.image.width / this.max_frame), 0, this.image.width / this.max_frame, this.image.height,
-			0 - this.width / 2, 0 - this.height / 2, this.width, this.height);
+		if (this.image) {
+			ctx.drawImage(this.image,
+				this.frame * (this.image.width / this.max_frame), 0, this.image.width / this.max_frame, this.image.height,
+				0 - this.width / 2, 0 - this.height / 2, this.width, this.height);
+		}
 
 		for (var i = 0; i < this.sub_entities.length; i++) {
 			if (this.sub_entities[i].z_index >= this.z_index)
@@ -910,7 +934,11 @@ CollidingEntity.prototype.update = function(game) {
 CollidingEntity.prototype.check_collision = function(game) {
 	for (var i = 0; i < this.collision_map.length; i++) {
 		// console.log("debug: ", this.collision_radius + this.collision_map[i].class.prototype.collision_radius);
-		var colliding = game.find_colliding(this, this.collision_map[i].class, this.collision_radius);
+		var colliding;
+		if (this.collision_map[i].container_class)
+			colliding = game.find_colliding_nested(this, this.collision_map[i].container_class, this.collision_map[i].class, this.collision_radius);
+		else
+			colliding = game.find_colliding(this, this.collision_map[i].class, this.collision_radius);
 		// var colliding = game.find_near_dynamic(this, this.collision_map[i].class, this.collision_radius);
 		for (var k = 0; k < colliding.length; k++) {
 			this[this.collision_map[i].callback](game, colliding[k]);
@@ -1040,7 +1068,7 @@ function GridSystem (game, sizex, sizey, width, height) {
 	this.width = width;
 	this.height = height;
 
-	this.grid = this.generate_grid(0);
+	// this.grid = this.generate_grid(0);
 }
 GridSystem.prototype = Object.create(Entity.prototype);
 GridSystem.prototype.class_name = 'GridSystem';
@@ -1054,6 +1082,9 @@ GridSystem.prototype.generate_grid = function(value) {
 	}
 
 	return grid;
+};
+GridSystem.prototype.set_grid = function(grid) {
+	this.grid = grid;
 };
 GridSystem.prototype.get_point = function(px, py) {
 	return [
@@ -1220,7 +1251,7 @@ GridSystem.prototype.rect_set = function(p, w, h, value) {
 
 function RenderedGridSystem (game, sizex, sizey, width, height) {
 	GridSystem.call(this, game, sizex, sizey, width, height);
-	this.rendered_grid = this.render();
+	this.rendered_grid = this.prepare_buffer();
 }
 RenderedGridSystem.prototype = Object.create(GridSystem.prototype);
 RenderedGridSystem.prototype.class_name = 'RenderedGridSystem';
@@ -1228,7 +1259,7 @@ RenderedGridSystem.prototype.draw = function(ctx) {
 	ctx.drawImage(this.rendered_grid, 0, 0, this.rendered_grid.width, this.rendered_grid.height);
 };
 
-RenderedGridSystem.prototype.render = function() {
+RenderedGridSystem.prototype.prepare_buffer = function() {
 	var buffer_canvas = document.createElement('canvas');
 	buffer_canvas.width = this.width * this.sizex;
 	buffer_canvas.height = this.height * this.sizey;
@@ -1236,9 +1267,13 @@ RenderedGridSystem.prototype.render = function() {
 	var buffer_context = buffer_canvas.getContext('2d');
 	buffer_context.imageSmoothingEnabled = false;
 
-	this.render_rect(buffer_context, [0, 0], this.sizex, this.sizey);
+	// this.render_rect(buffer_context, [0, 0], this.sizex, this.sizey);
 
 	return buffer_canvas;
+};
+RenderedGridSystem.prototype.set_grid = function(grid) {
+	this.grid = grid;
+	this.update_render([0, 0], this.sizex, this.sizey);
 };
 
 RenderedGridSystem.prototype.rect_set = function(p, w, h, value) {
@@ -1252,4 +1287,23 @@ RenderedGridSystem.prototype.update_render = function(p, w, h) {
 		this.render_rect(buffer_context, p, w, h);
 	}
 };
+
+// // example render_rect function
+// RenderedGridSystem.prototype.render_rect = function(ctx, p, w, h) {
+// 	for (var x = p[0]; x < p[0] + w; x++) {
+// 		for (var y = p[1]; y < p[1] + h; y++) {
+// 			if (this.grid[x][y]) {
+// 				ctx.save();
+// 				ctx.translate(x * this.width, y * this.height);
+// 				ctx.drawImage(this.image, 0, 0, this.width, this.height);
+// 				ctx.restore();
+// 			} else {
+// 				ctx.save();
+// 				ctx.translate(x * this.width, y * this.height);
+// 				ctx.clearRect(0, 0, this.width, this.height);
+// 				ctx.restore();
+// 			}
+// 		}
+// 	}
+// };
 
