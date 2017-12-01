@@ -446,7 +446,7 @@ GameSystem.prototype.find_colliding_nested = function(me, group_type, type, dist
 				var p = { px: ent.px + offset.px, py: ent.py + offset.py };
 				if (Math.abs(p.px - me.px) < hit_radius && Math.abs(p.py - me.py) < hit_radius &&
 					Math.pow(Math.pow(p.px - me.px, 2) + Math.pow(p.py - me.py, 2), 0.5) < hit_radius) {
-					found.push(p);
+					found.push(ent_sub);
 				}
 			}
 		}
@@ -527,6 +527,7 @@ function ScreenEntity(game, px, py, width, height, image) {
 	this.image = image;
 
 	this.rotation = 0;
+	this.alpha = 1;
 	this.angle_granularity = 15;
 }
 ScreenEntity.prototype = Object.create(Entity.prototype);
@@ -543,6 +544,8 @@ ScreenEntity.prototype.draw = function(ctx) {
 	// ctx.drawImage(this.image, this.px - this.width / 2, this.py - this.height / 2, this.width, this.height);
 	if (this.visible) {
 		ctx.save();
+
+		ctx.globalAlpha = this.alpha;
 
 		ctx.translate(this.px, this.py);
 		ctx.rotate(Math.PI * (Math.floor(this.angle / this.angle_granularity) * this.angle_granularity) / 180);
