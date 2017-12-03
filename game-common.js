@@ -963,11 +963,11 @@ PathEntity.prototype.update = function(game) {
 			this.current_action.da *= this.current_action.fda;
 		}
 		if (this.current_action.da !== undefined) {
-			this.current_action.angle += this.current_action.da;
-			this.angle = this.current_action.angle;
+			this.angle += this.current_action.da;
+			// this.angle = this.current_action.angle;
 			if (this.current_action.speed) {
-				this.current_action.sx = Math.cos(this.current_action.angle / 180 * Math.PI) * this.current_action.speed;
-				this.current_action.sy = Math.sin(this.current_action.angle / 180 * Math.PI) * this.current_action.speed;
+				this.current_action.sx = Math.cos(this.angle / 180 * Math.PI) * this.current_action.speed;
+				this.current_action.sy = Math.sin(this.angle / 180 * Math.PI) * this.current_action.speed;
 			}
 		}
 
