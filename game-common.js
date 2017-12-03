@@ -261,6 +261,7 @@ function GameSystem(canvas, assets) {
 	this.debug_time = { game_update_time: 0, game_draw_time: 0, game_entity_draw_time: {}, };
 	this.debug_time_timer = 0;
 
+	this.previous_keystate = {};
 	this.keystate = {
 		W: false,
 		A: false,
@@ -271,12 +272,14 @@ function GameSystem(canvas, assets) {
 		ctrl: false,
 		alt: false,
 	};
+	this.previous_mouse1_state = false;
 	this.mouse1_state = false;
 	this.mouse_position = { px: 0, py: 0 };
 
 	document.addEventListener('keydown', (function (e) {
 		e = e || window.event;
-		e.preventDefault();
+		if (!this.keystate.ctrl)
+			e.preventDefault();
 		var charcode = String.fromCharCode(e.keyCode);
 		this.keystate[charcode] = true;
 		this.keystate.shift = !!e.shiftKey;
@@ -287,7 +290,8 @@ function GameSystem(canvas, assets) {
 
 	document.addEventListener('keyup', (function (e) {
 		e = e || window.event;
-		e.preventDefault();
+		if (!this.keystate.ctrl)
+			e.preventDefault();
 		var charcode = String.fromCharCode(e.keyCode);
 		this.keystate[charcode] = false;
 		this.keystate.shift = !!e.shiftKey;
@@ -342,7 +346,6 @@ GameSystem.prototype.step_game_frame = function(ctx) {
 	// this.debug_time.game_draw_time += new Date().getTime() - start; // DEBUG_TIME
 };
 GameSystem.prototype.update = function () {
-
 	this.context_container = undefined;
 
 	for (var i = 0; i < this.entities_to_remove.length; i++) {
@@ -377,6 +380,11 @@ GameSystem.prototype.update = function () {
 	for (var i = 0; i < keys.length; i++) {
 		this.particle_systems[keys[i]].update(this);
 	}
+
+	this.previous_keystate = this.keystate;
+	this.keystate = Object.assign({}, this.keystate);
+
+	this.previous_mouse1_state = this.mouse1_state;
 };
 GameSystem.prototype.draw = function (ctx) {
 	ctx.clearRect(0, 0, 640, 480);
