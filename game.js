@@ -382,26 +382,28 @@ UFOCorsairEnemy.prototype.fire = function(game) {
 
 	for (var da = 0.25; da < 2; da += 0.5) {
 		game.entities_to_add.push(new EnemyBullet(game, this.px + offset.px, this.py + offset.py, [
+			{ timeout: -1, angle: this.angle },
 			{
 				timeout: 20, repeat: 8,
 				spawn: [{
 					image: game.images.bright_purple_square_bullet,
 					path: [{timeout: 90, trail: { type: 'purple_particles', thickness: 0.01 }, }, {delete: true}],
 				}],
-				trail: { type: 'purple_particles', thickness: 0.03 }, angle: this.angle, speed: 3, da: da
+				trail: { type: 'purple_particles', thickness: 0.03 },
+				speed: 3, da: da
 			},
-			{ delete: true },
 		], game.images.purple_square_bullet));
 		game.entities_to_add.push(new EnemyBullet(game, this.px + offset.px, this.py + offset.py, [
+			{ timeout: -1, angle: this.angle },
 			{
 				timeout: 20, repeat: 8,
 				spawn: [{
 					image: game.images.bright_purple_square_bullet,
 					path: [{timeout: 90, trail: { type: 'purple_particles', thickness: 0.01 }, }, {delete: true}],
 				}],
-				trail: { type: 'purple_particles', thickness: 0.03 }, angle: this.angle, speed: 3, da: -da
+				trail: { type: 'purple_particles', thickness: 0.03 },
+				speed: 3, da: -da
 			},
-			{ delete: true },
 		], game.images.purple_square_bullet));
 		
 	}

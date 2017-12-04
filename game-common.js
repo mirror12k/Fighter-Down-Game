@@ -361,6 +361,7 @@ GameSystem.prototype.update = function () {
 
 	try {
 		for (var i = 0; i < this.entities.length; i++) {
+			this.context_container = this.entities[i];
 			this.entities[i].update(this);
 		}
 	} catch (e) {
@@ -440,9 +441,9 @@ GameSystem.prototype.draw = function (ctx) {
 };
 
 GameSystem.prototype.remove_entity = function(ent) {
-	if (this.context_container === undefined) {
+	if (this.entities.indexOf(ent) !== -1) {
 		this.entities_to_remove.push(ent);
-	} else {
+	} else if (this.context_container !== undefined) {
 		this.context_container.remove_entity(ent);
 	}
 };
@@ -974,6 +975,7 @@ PathEntity.prototype.update = function(game) {
 			this.angle += this.current_action.da;
 			// this.angle = this.current_action.angle;
 			if (this.current_action.speed) {
+				console.log('debug angle:');
 				this.current_action.sx = Math.cos(this.angle / 180 * Math.PI) * this.current_action.speed;
 				this.current_action.sy = Math.sin(this.angle / 180 * Math.PI) * this.current_action.speed;
 			}
