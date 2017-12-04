@@ -905,6 +905,14 @@ PathEntity.prototype.trigger_path_action = function(game, action) {
 		}
 	}
 
+	if (action.repeat !== undefined) {
+		if (this.action_repeat === undefined || this.action_repeat <= 0) {
+			this.action_repeat = action.repeat;
+		}
+	} else {
+		this.action_repeat = undefined;
+	}
+
 
 	if (action.sx === undefined)
 		action.sx = 0;
@@ -999,10 +1007,10 @@ PathEntity.prototype.update = function(game) {
 		if (this.timer !== undefined) {
 			this.timer--;
 			if (this.timer <= 0) {
-				if (this.current_action.repeat !== undefined && this.current_action.repeat > 1) {
-					this.current_action.repeat--;
+				if (this.action_repeat !== undefined && this.action_repeat > 1) {
 					this.timer = this.current_action.timeout;
 					this.trigger_path_action(game, this.current_action);
+					this.action_repeat--;
 				} else {
 					this.current_action = undefined;
 				}
