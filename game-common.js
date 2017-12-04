@@ -10,7 +10,14 @@ function load_image(url, callback) {
 }
 function load_audio(url, callback) {
 	var audio = new Audio();
-	audio.addEventListener('canplaythrough', callback.bind(undefined, audio));
+	// audio.addEventListener('canplaythrough', callback.bind(undefined, audio));
+	var loaded = false;
+	audio.addEventListener('canplaythrough', function () {
+		if (!loaded) {
+			loaded = true;
+			callback(audio);
+		}
+	});
 	audio.addEventListener('error', function (e) {
 		console.log("error loading audio:", audio, e);
 	});
@@ -975,7 +982,6 @@ PathEntity.prototype.update = function(game) {
 			this.angle += this.current_action.da;
 			// this.angle = this.current_action.angle;
 			if (this.current_action.speed) {
-				console.log('debug angle:');
 				this.current_action.sx = Math.cos(this.angle / 180 * Math.PI) * this.current_action.speed;
 				this.current_action.sy = Math.sin(this.angle / 180 * Math.PI) * this.current_action.speed;
 			}
