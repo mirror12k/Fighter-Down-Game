@@ -140,15 +140,27 @@ EnemyEntity.prototype.take_damage = function(game, damage) {
 	}
 };
 EnemyEntity.prototype.on_death = function(game) {
+
+	var p = { px: this.px, py: this.py };
+	if (this.parent instanceof EnemyContainerEntity) {
+		p = this.parent.get_global_position(this);
+	}
+
 	var count = 24 + Math.random() * 32;
 	for (var i = 0; i < count; i++) {
 		var offsetx = (Math.random() * this.width - (this.width / 2)) / 1.5;
 		var offsety = (Math.random() * this.height - (this.height / 2)) / 1.5;
-		game.particle_systems.explosion_particles.add_particle(this.px + offsetx, this.py + offsety, 2);
+		game.particle_systems.explosion_particles.add_particle(p.px + offsetx, p.py + offsety, 2);
 	}
 	var count = Math.floor(2 + Math.random() * 2);
 	for (var i = 0; i < count; i++) {
-		game.particle_systems.ship_chunks.add_image_particle(this.image, this.width, this.height, this.px, this.py, 3);
+		game.particle_systems.ship_chunks.add_image_particle(this.image, this.width, this.height, p.px, p.py, 3);
+	}
+
+	for (var i = 0; i < this.sub_entities.length; i++) {
+		if (this.sub_entities[i] instanceof EnemyEntity) {
+			this.sub_entities[i].on_death(game);
+		}
 	}
 };
 
@@ -159,6 +171,15 @@ function EnemyContainerEntity(game, px, py, width, height, image, path) {
 	this.armor = 0;
 }
 EnemyContainerEntity.prototype = Object.create(EnemyEntity.prototype);
+EnemyContainerEntity.prototype.get_global_position = function(pxy_angle) {
+	var offset = d2_point_offset(this.angle, pxy_angle.px, pxy_angle.py);
+
+	return {
+		px: this.px + offset.px,
+		py: this.py + offset.py,
+		angle: this.angle + pxy_angle.angle,
+	}
+};
 
 
 function UFOEnemy(game, px, py, path) {
@@ -312,32 +333,80 @@ Asteroid.prototype.collision_radius = 32;
 
 
 function UFOStation(game, px, py, path) {
-	EnemyEntity.call(this, game, px, py, 64, 64, game.images.ufo_station_core, path);
+	EnemyContainerEntity.call(this, game, px, py, 64, 64, game.images.ufo_station_core, path);
 
-	this.sub_entities.push(new UFOStationRing(game, 0, 0, -0.25, 32));
-	this.sub_entities.push(new UFOStationRing(game, 0, 0, 0.25, 24));
+	// this.rotation = 0.25;
+	this.angle_granularity = 5;
+	this.angle_offset = 0;
+
+	this.outer_ring = [];
+	var pylon_distance = 32;
+	var section_count = 6;
+	for (var i = 0; i < section_count; i++) {
+		var offset = point_offset(i * (360 / section_count), pylon_distance);
+		var pylon = new EnemyEntity(game, offset.px, offset.py, 64, 64, game.images.ufo_station_pylon2);
+		pylon.collision_radius = 20;
+		pylon.angle_granularity = 5;
+		pylon.z_index = -1;
+		pylon.angle = i * (360 / section_count);
+		this.outer_ring.push(pylon);
+		this.add_entity(pylon);
+	}
+
+	this.inner_ring = [];
+	var pylon_distance = 24;
+	var section_count = 6;
+	for (var i = 0; i < section_count; i++) {
+		var offset = point_offset(i * (360 / section_count), pylon_distance);
+		var pylon = new EnemyEntity(game, offset.px, offset.py, 64, 64, game.images.ufo_station_pylon2);
+		pylon.collision_radius = 20;
+		pylon.angle_granularity = 5;
+		pylon.z_index = -1;
+		pylon.angle = i * (360 / section_count);
+		this.inner_ring.push(pylon);
+		this.add_entity(pylon);
+	}
+
+	// this.sub_entities.push(new UFOStationRing(game, 0, 0, -0.25, 32));
+	// this.sub_entities.push(new UFOStationRing(game, 0, 0, 0.25, 24));
 }
-UFOStation.prototype = Object.create(EnemyEntity.prototype);
+UFOStation.prototype = Object.create(EnemyContainerEntity.prototype);
 UFOStation.prototype.collision_radius = 16;
 UFOStation.prototype.update = function(game) {
-	EnemyEntity.prototype.update.call(this, game);
+	EnemyContainerEntity.prototype.update.call(this, game);
 	if (this.firing > 0)
 		this.spawn_bullets(game);
+
+	this.angle_offset = (this.angle_offset + 0.25) % 360;
+
+	var pylon_distance = 32;
+	var section_count = 6;
+	for (var i = 0; i < section_count; i++) {
+		var angle = Math.floor((this.angle_offset + i * (360 / section_count)) / this.angle_granularity) * this.angle_granularity;
+		var offset = point_offset(angle, pylon_distance);
+		this.outer_ring[i].px = offset.px;
+		this.outer_ring[i].py = offset.py;
+		this.outer_ring[i].angle = angle;
+	}
+
+	var pylon_distance = 24;
+	var section_count = 6;
+	for (var i = 0; i < section_count; i++) {
+		var angle = Math.floor((-this.angle_offset + i * (360 / section_count)) / this.angle_granularity) * this.angle_granularity;
+		var offset = point_offset(angle, pylon_distance);
+		this.inner_ring[i].px = offset.px;
+		this.inner_ring[i].py = offset.py;
+		this.inner_ring[i].angle = angle;
+	}
+
+	// for (var i = 0; i < section_count; i++) {
+	// 	var offset = point_offset(i * (360 / section_count), pylon_distance);
+	// 	var pylon = new ScreenEntity(game, offset.px, offset.py, 64, 64, game.images.ufo_station_pylon2);
+	// 	pylon.angle = i * (360 / section_count);
+	// 	this.outer_ring.push(pylon);
+	// 	this.sub_entities.push(pylon);
+	// }
 };
-// UFOStation.prototype.draw = function(ctx) {	ctx.save();
-// 	ctx.save();
-
-	
-// 	ctx.translate(this.px, this.py);
-// 	ctx.rotate(Math.PI * (Math.floor(this.angle / this.angle_granularity) * this.angle_granularity) / 180);
-// 	Entity.prototype.draw.call(this, ctx);
-
-// 	ctx.drawImage(this.image,
-// 		this.frame * (this.image.width / this.max_frame), 0, this.image.width / this.max_frame, this.image.height,
-// 		0 - this.width / 2, 0 - this.height / 2, this.width, this.height);
-
-// 	ctx.restore();
-// };
 
 UFOStation.prototype.spawn_bullets = function(game) {
 	// spread triangle fire
@@ -397,13 +466,6 @@ function UFOStationRing(game, px, py, rotation, pylon_distance) {
 }
 UFOStationRing.prototype = Object.create(ScreenEntity.prototype);
 UFOStationRing.prototype.z_index = -1;
-
-
-
-function UFOStationPylon(game, px, py) {
-	ScreenEntity.call(this, game, px, py, 64, 64, game.images.ufo_station_pylon2);
-}
-UFOStationPylon.prototype = Object.create(ScreenEntity.prototype);
 
 
 function RotatingCrystalEntity(game, px, py) {
@@ -675,16 +737,16 @@ function main () {
 
 		game.add_entity(new PlayerShip(game, 320, 240));
 
-		// game.add_entity(new UFOStation(game, 320, 0, [
-		// 	{ timeout: 120, sy: 0.1 },
-		// 	{ timeout: 360, repeat: 4, sy: 0.1, call: [{ method: 'fire', args: [320, 240] }] },
-		// ]));
-
-		game.add_entity(new UFOPlatform(game, 320, 0, [
-			{ timeout: 1000, sy: 0.5 },
-			{ timeout: 120, repeat: 4, call: [{ method: 'fire', args: [300, 300] }] },
-			{ timeout: 360, sy: 0.5, sx: 0.5 },
+		game.add_entity(new UFOStation(game, 320, 0, [
+			{ timeout: 120, sy: 0.1 },
+			{ timeout: 360, repeat: 4, sy: 0.1, call: [{ method: 'fire', args: [320, 240] }] },
 		]));
+
+		// game.add_entity(new UFOPlatform(game, 320, 0, [
+		// 	{ timeout: 1000, sy: 0.5 },
+		// 	{ timeout: 120, repeat: 4, call: [{ method: 'fire', args: [300, 300] }] },
+		// 	{ timeout: 360, sy: 0.5, sx: 0.5 },
+		// ]));
 
 		game.add_entity(new UFOEnemy(game, 0,100, [
 			{ timeout: 640, sx: 1 },
