@@ -586,7 +586,7 @@ Entity.prototype.update = function(game) {
 	for (var i = this.entity_tags.length - 1; i >= 0; i--) {
 		if (this.entity_tags[i].timer !== undefined) {
 			this.entity_tags[i].timer--;
-			if (this.entity_tags[i] <= 0) {
+			if (this.entity_tags[i].timer <= 0) {
 				this.entity_tags.splice(i, 1);
 			}
 		}
@@ -777,7 +777,6 @@ ParticleEffectSystem.prototype.add_particle = function(px, py, speed, frame, ang
 ParticleEffectSystem.prototype.add_image_particle = function(image, width, height, px, py, speed) {
 	var sx = ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
 	var sy = ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
-	console.log('debug:' + width + ", "+height);
 
 	var sourcex = image.width * (Math.random() * 0.5);
 	var sourcey = image.height * (Math.random() * 0.5);
@@ -794,7 +793,6 @@ ParticleEffectSystem.prototype.add_image_particle = function(image, width, heigh
 	// var offsetx = Math.random() * width - width / 2;
 	// var offsety = Math.random() * height - height / 2;
 
-	console.log('debug outcome:' + image.width + ", "+image.height);
 	this.particles.push({
 		image: image,
 		width: chopped_width,
