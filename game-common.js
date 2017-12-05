@@ -447,10 +447,16 @@ GameSystem.prototype.draw = function (ctx) {
 	}
 };
 
+GameSystem.prototype.add_entity = function(ent) {
+	ent.parent = this;
+	this.entities_to_add.push(ent);
+};
+
 GameSystem.prototype.remove_entity = function(ent) {
 	if (this.entities.indexOf(ent) !== -1) {
 		this.entities_to_remove.push(ent);
 	} else if (this.context_container !== undefined) {
+		console.log("removing from container:", this.context_container);
 		this.context_container.remove_entity(ent);
 	}
 };
@@ -598,6 +604,10 @@ Entity.prototype.remove_tag = function(tag) {
 	if (index !== -1) {
 		this.entity_tags.splice(index, 1);
 	}
+};
+Entity.prototype.add_entity = function(ent) {
+	ent.parent = this;
+	this.sub_entities.push(ent);
 };
 Entity.prototype.remove_entity = function(ent) {
 	var index = this.sub_entities.indexOf(ent);
