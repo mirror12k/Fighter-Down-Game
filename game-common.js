@@ -173,7 +173,7 @@ var image_lib = {
 		var buffer_context = buffer_canvas.getContext('2d');
 		buffer_context.imageSmoothingEnabled = false;
 
-		var colored_image = image_colorize(image, outline_style);
+		var colored_image = image_lib.image_colorize(image, outline_style);
 
 		buffer_context.translate(1, 1);
 		buffer_context.drawImage(colored_image, -1, 0, image.width, image.height);
@@ -199,20 +199,36 @@ var image_lib = {
 		return buffer_canvas;
 	},
 
-	// chops the image using the mask as a guide
-	image_chop: function (image, mask, offsetx, offsety, maskw, maskh) {
+	// chops the image
+	image_chop: function (image, offsetx, offsety, width, height, full_width, full_height) {
 		var buffer_canvas = document.createElement('canvas');
-		buffer_canvas.width = maskw || mask.width;
-		buffer_canvas.height = maskh || mask.height;
+		buffer_canvas.width = width;
+		buffer_canvas.height = height;
 		var buffer_context = buffer_canvas.getContext('2d');
 		buffer_context.imageSmoothingEnabled = false;
 
-		buffer_context.save();
 		buffer_context.translate(-offsetx, -offsety);
+		buffer_context.drawImage(image, 0, 0, full_width, full_height);
+
+		return buffer_canvas;
+	},
+
+	// masks the image
+	image_mask: function (image, mask, mask_frame, mask_max_frame) {
+		mask_frame = mask_frame || 0;
+		mask_max_frame = mask_max_frame || 1;
+
+		var buffer_canvas = document.createElement('canvas');
+		buffer_canvas.width = image.width;
+		buffer_canvas.height = image.height;
+		var buffer_context = buffer_canvas.getContext('2d');
+		buffer_context.imageSmoothingEnabled = false;
+
 		buffer_context.drawImage(image, 0, 0, image.width, image.height);
-		buffer_context.restore();
 		buffer_context.globalCompositeOperation = 'destination-in';
-		buffer_context.drawImage(mask, 0, 0, maskw || mask.width, maskh || mask.height);
+		buffer_context.drawImage(mask,
+			mask_frame * (mask.width / mask_max_frame), 0, mask.width / mask_max_frame, mask.height,
+			0, 0, image.width, image.height);
 
 		return buffer_canvas;
 	},
@@ -456,7 +472,6 @@ GameSystem.prototype.remove_entity = function(ent) {
 	if (this.entities.indexOf(ent) !== -1) {
 		this.entities_to_remove.push(ent);
 	} else if (this.context_container !== undefined) {
-		console.log("removing from container:", this.context_container);
 		this.context_container.remove_entity(ent);
 	}
 };
@@ -711,6 +726,7 @@ function ParticleEffectSystem(game, config) {
 
 	this.dynamic_images = config.dynamic_images;
 	this.static_images = config.static_images;
+	this.masked_images = config.masked_images;
 
 	if (this.fill_style !== undefined)
 		this.particle_image = this.render();
@@ -761,21 +777,28 @@ ParticleEffectSystem.prototype.add_particle = function(px, py, speed, frame, ang
 ParticleEffectSystem.prototype.add_image_particle = function(image, width, height, px, py, speed) {
 	var sx = ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
 	var sy = ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
+	console.log('debug:' + width + ", "+height);
 
 	var sourcex = image.width * (Math.random() * 0.5);
 	var sourcey = image.height * (Math.random() * 0.5);
-	var width = width * (Math.random() * 0.25 + 0.25);
-	var height = height * (Math.random() * 0.25 + 0.25);
+	var chopped_width = width * (Math.random() * 0.25 + 0.25);
+	var chopped_height = height * (Math.random() * 0.25 + 0.25);
+
+	image = image_lib.image_chop(image, sourcex, sourcey, chopped_width, chopped_height, width, height);
+	if (this.masked_images) {
+		// image = image_lib.image_chop(image, this.particle_image, sourcex, sourcey, width, height, Math.floor(Math.random() * this.max_frame), this.max_frame);
+		image = image_lib.image_mask(image, this.particle_image, Math.floor(Math.random() * this.max_frame), this.max_frame);
+		image = image_lib.image_composite(image_lib.image_outline(image, '#000'), image);
+	}
 
 	// var offsetx = Math.random() * width - width / 2;
 	// var offsety = Math.random() * height - height / 2;
 
+	console.log('debug outcome:' + image.width + ", "+image.height);
 	this.particles.push({
 		image: image,
-		sourcex: sourcex,
-		sourcey: sourcey,
-		width: width,
-		height: height,
+		width: chopped_width,
+		height: chopped_height,
 		px: px,
 		py: py,
 		sx: sx,
@@ -837,9 +860,12 @@ ParticleEffectSystem.prototype.draw = function(ctx) {
 			}
 			// var width = this.particle_width * ((6 - p.frame) / 4);
 			// var height = this.particle_height * ((6 - p.frame) / 4);
+			// if (this.masked_images) {
+			// 	ctx.drawImage(p.image, 0 - p.image.width / 2, 0 - p.image.height / 2, p.image.width, p.image.height);
+			// } else
 			if (this.dynamic_images) {
 				ctx.drawImage(p.image, 
-					p.sourcex, p.sourcey, p.width, p.height,
+					// p.sourcex, p.sourcey, p.width, p.height,
 					// this.width * p.frame, 0, this.width, this.height,
 					0 - p.width / 2, 0 - p.height / 2, p.width, p.height);
 			// } else if (this.static_images) {
@@ -1032,44 +1058,44 @@ PathEntity.prototype.update = function(game) {
 
 
 
-function CollidingEntity(game, px, py, width, height, image, path) {
-	PathEntity.call(this, game, px, py, width, height, image, path);
-}
-CollidingEntity.prototype = Object.create(PathEntity.prototype);
-CollidingEntity.prototype.constructor = CollidingEntity;
-CollidingEntity.prototype.class_name = 'CollidingEntity';
-CollidingEntity.prototype.collision_radius = 10; // used for circular collision checking
-CollidingEntity.prototype.collision_map = [];
-// // example collision map property
-// CollidingEntity.prototype.collision_map = [
-// 	{
-// 		// rectangular_collision: true, // set to true if we need to check box-collisions (no rotation), otherwise circular collision is used
-// 		class: EnemyEntity, // class we are checking for collision against
-// 		// container_class: EnemyContainer, // optional class containing the entity we are looking for
-// 		callback: 'on_hit', // our callback method name, recieves arguments (game, other)
-// 	},
-// ];
+// function CollidingEntity(game, px, py, width, height, image, path) {
+// 	PathEntity.call(this, game, px, py, width, height, image, path);
+// }
+// CollidingEntity.prototype = Object.create(PathEntity.prototype);
+// CollidingEntity.prototype.constructor = CollidingEntity;
+// CollidingEntity.prototype.class_name = 'CollidingEntity';
+// CollidingEntity.prototype.collision_radius = 10; // used for circular collision checking
+// CollidingEntity.prototype.collision_map = [];
+// // // example collision map property
+// // CollidingEntity.prototype.collision_map = [
+// // 	{
+// // 		// rectangular_collision: true, // set to true if we need to check box-collisions (no rotation), otherwise circular collision is used
+// // 		class: EnemyEntity, // class we are checking for collision against
+// // 		// container_class: EnemyContainer, // optional class containing the entity we are looking for
+// // 		callback: 'on_hit', // our callback method name, recieves arguments (game, other)
+// // 	},
+// // ];
 
-CollidingEntity.prototype.update = function(game) {
-	PathEntity.prototype.update.call(this, game);
-	this.check_collision(game);
-};
-CollidingEntity.prototype.check_collision = function(game) {
-	for (var i = 0; i < this.collision_map.length; i++) {
-		// console.log("debug: ", this.collision_radius + this.collision_map[i].class.prototype.collision_radius);
-		var colliding;
-		if (this.collision_map[i].rectangular_collision)
-			colliding = game.find_colliding_rectangular(this, this.collision_map[i].class);
-		else if (this.collision_map[i].container_class)
-			colliding = game.find_colliding_circular_nested(this, this.collision_map[i].container_class, this.collision_map[i].class, this.collision_radius);
-		else
-			colliding = game.find_colliding_circular(this, this.collision_map[i].class, this.collision_radius);
-		// var colliding = game.find_near_dynamic(this, this.collision_map[i].class, this.collision_radius);
-		for (var k = 0; k < colliding.length; k++) {
-			this[this.collision_map[i].callback](game, colliding[k]);
-		}
-	}
-};
+// CollidingEntity.prototype.update = function(game) {
+// 	PathEntity.prototype.update.call(this, game);
+// 	this.check_collision(game);
+// };
+// CollidingEntity.prototype.check_collision = function(game) {
+// 	for (var i = 0; i < this.collision_map.length; i++) {
+// 		// console.log("debug: ", this.collision_radius + this.collision_map[i].class.prototype.collision_radius);
+// 		var colliding;
+// 		if (this.collision_map[i].rectangular_collision)
+// 			colliding = game.find_colliding_rectangular(this, this.collision_map[i].class);
+// 		else if (this.collision_map[i].container_class)
+// 			colliding = game.find_colliding_circular_nested(this, this.collision_map[i].container_class, this.collision_map[i].class, this.collision_radius);
+// 		else
+// 			colliding = game.find_colliding_circular(this, this.collision_map[i].class, this.collision_radius);
+// 		// var colliding = game.find_near_dynamic(this, this.collision_map[i].class, this.collision_radius);
+// 		for (var k = 0; k < colliding.length; k++) {
+// 			this[this.collision_map[i].callback](game, colliding[k]);
+// 		}
+// 	}
+// };
 
 
 

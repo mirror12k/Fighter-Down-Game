@@ -105,6 +105,7 @@ function EnemyEntity(game, px, py, width, height, image, path) {
 	PathEntity.call(this, game, px, py, width, height, image, path);
 	this.health = 250;
 	this.armor = 0;
+	this.dead = false;
 }
 EnemyEntity.prototype = Object.create(PathEntity.prototype);
 // EnemyEntity.prototype.collision_map = [
@@ -132,7 +133,8 @@ EnemyEntity.prototype = Object.create(PathEntity.prototype);
 // };
 EnemyEntity.prototype.take_damage = function(game, damage) {
 	this.health -= damage - (damage * this.armor);
-	if (this.health <= 0) {
+	if (this.health <= 0 && !this.dead) {
+		this.dead = true;
 		this.on_death(game);
 		this.parent.remove_entity(this);
 	}
@@ -144,7 +146,7 @@ EnemyEntity.prototype.on_death = function(game) {
 		var offsety = (Math.random() * this.height - (this.height / 2)) / 1.5;
 		game.particle_systems.explosion_particles.add_particle(this.px + offsetx, this.py + offsety, 2);
 	}
-	var count = Math.floor(1 + Math.random() * 2);
+	var count = Math.floor(2 + Math.random() * 2);
 	for (var i = 0; i < count; i++) {
 		game.particle_systems.ship_chunks.add_image_particle(this.image, this.width, this.height, this.px, this.py, 3);
 	}
@@ -636,6 +638,7 @@ function main () {
 			particle_effect_explosion: "particle_effect_explosion.png",
 
 			asteroid_64: "asteroid_64.png",
+			chop_piece: "chop_piece.png",
 
 			platform_core: "platform_core.png",
 			platform_sections: "platform_sections.png",
@@ -743,8 +746,10 @@ function main () {
 		});
 		game.particle_systems.ship_chunks = new ParticleEffectSystem(game, {
 			dynamic_images: true,
+			particle_image: game.images.chop_piece,
+			masked_images: true,
 			max_frame: 1,
-			particle_longevity: 0.01, 
+			particle_longevity: 0.003, 
 		});
 		game.particle_systems.explosion_particles = new ParticleEffectSystem(game, {
 			particle_image: game.images.particle_effect_explosion,
