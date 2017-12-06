@@ -453,8 +453,8 @@ GameSystem.prototype.draw = function (ctx) {
 		if (game_systems_to_draw[i].z_index >= 0) {
 			// var start = new Date().getTime(); // DEBUG_TIME
 			game_systems_to_draw[i].draw(ctx);
-			// this.debug_time.game_entity_draw_time[this.particle_systems[keys[i]].class_name] = // DEBUG_TIME
-				// (this.debug_time.game_entity_draw_time[this.particle_systems[keys[i]].class_name] || 0) + new Date().getTime() - start; // DEBUG_TIME
+			// this.debug_time.game_entity_draw_time[game_systems_to_draw[i].class_name] = // DEBUG_TIME
+				// (this.debug_time.game_entity_draw_time[game_systems_to_draw[i].class_name] || 0) + new Date().getTime() - start; // DEBUG_TIME
 		}
 	}
 
