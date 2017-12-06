@@ -778,14 +778,13 @@ ParticleEffectSystem.prototype.add_image_particle = function(image, width, heigh
 	var sx = ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
 	var sy = ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
 
-	var sourcex = image.width * (Math.random() * 0.5);
-	var sourcey = image.height * (Math.random() * 0.5);
+	var sourcex = image.width * (Math.random() * 1);
+	var sourcey = image.height * (Math.random() * 1);
 	var chopped_width = width * (Math.random() * 0.25 + 0.25);
 	var chopped_height = height * (Math.random() * 0.25 + 0.25);
 
 	image = image_lib.image_chop(image, sourcex, sourcey, chopped_width, chopped_height, width, height);
 	if (this.masked_images) {
-		// image = image_lib.image_chop(image, this.particle_image, sourcex, sourcey, width, height, Math.floor(Math.random() * this.max_frame), this.max_frame);
 		image = image_lib.image_mask(image, this.particle_image, Math.floor(Math.random() * this.max_frame), this.max_frame);
 		image = image_lib.image_composite(image_lib.image_outline(image, '#000'), image);
 	}

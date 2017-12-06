@@ -167,8 +167,6 @@ EnemyEntity.prototype.on_death = function(game) {
 
 function EnemyContainerEntity(game, px, py, width, height, image, path) {
 	EnemyEntity.call(this, game, px, py, width, height, image, path);
-	this.health = 250;
-	this.armor = 0;
 }
 EnemyContainerEntity.prototype = Object.create(EnemyEntity.prototype);
 EnemyContainerEntity.prototype.get_global_position = function(pxy_angle) {
@@ -476,16 +474,19 @@ function RotatingCrystalEntity(game, px, py) {
 RotatingCrystalEntity.prototype = Object.create(ScreenEntity.prototype);
 
 function UFOCorsairEnemy(game, px, py, path) {
-	PathEntity.call(this, game, px, py, 128, 64, game.images.ufo_corsair, path);
+	EnemyEntity.call(this, game, px, py, 128, 64, game.images.ufo_corsair, path);
 	this.sub_entities = [ new RotatingCrystalEntity(game, this.width / 4, 0) ];
 	// this.crystal_ent = new RotatingCrystalEntity(game, this.width / 4, 0);
 	this.angle = 0;
 
 	this.fire_timer = 30 * 5;
+
+	this.health = 500;
 }
-UFOCorsairEnemy.prototype = Object.create(PathEntity.prototype);
+UFOCorsairEnemy.prototype = Object.create(EnemyEntity.prototype);
+UFOCorsairEnemy.prototype.collision_radius = 32;
 // UFOCorsairEnemy.prototype.update = function(game) {
-// 	PathEntity.prototype.update.call(this, game);
+// 	EnemyEntity.prototype.update.call(this, game);
 // 	this.crystal_ent.update(game);
 
 // 	// this.fire_timer--;
@@ -541,6 +542,35 @@ UFOCorsairEnemy.prototype.fire = function(game) {
 		
 	}
 };
+
+function UFOCorvetteEnemy(game, px, py, path) {
+	EnemyContainerEntity.call(this, game, px, py, 128, 64, game.images.ufo_corvette, path);
+	this.angle = 0;
+
+	this.health = 500;
+	this.fire_timer = 30 * 5;
+
+	var cannon = new EnemyEntity(game, 0, -this.height / 3, 48, 48, game.images.ufo_corvette_cannon);
+	cannon.collision_radius = 24;
+	this.add_entity(cannon);
+	var cannon = new EnemyEntity(game, 0, this.height / 3, 48, 48, game.images.ufo_corvette_cannon);
+	cannon.collision_radius = 24;
+	this.add_entity(cannon);
+
+	var cannon = new EnemyEntity(game, this.width / 3, -this.height / 3, 48, 48, game.images.ufo_corvette_cannon);
+	cannon.collision_radius = 24;
+	this.add_entity(cannon);
+	var cannon = new EnemyEntity(game, this.width / 3, this.height / 3, 48, 48, game.images.ufo_corvette_cannon);
+	cannon.collision_radius = 24;
+	this.add_entity(cannon);
+}
+UFOCorvetteEnemy.prototype = Object.create(EnemyContainerEntity.prototype);
+UFOCorvetteEnemy.prototype.collision_radius = 32;
+// UFOCorvetteEnemy.prototype.update = function(game) {
+// 	EnemyContainerEntity.prototype.update.call(this, game);
+// };
+// UFOCorvetteEnemy.prototype.fire = function(game) {
+// };
 
 
 function PlayerShip(game, px, py) {
@@ -686,8 +716,10 @@ function main () {
 			fighter_attack_formation: "fighter_attack_formation.png",
 			fighter_transform_animation: "fighter_transform_animation.png",
 			ufo: "ufo.png",
-			ufo_small: "ufo_small.png",
+			// ufo_small: "ufo_small.png",
 			ufo_corsair: "ufo_corsair.png",
+			ufo_corvette: "ufo_corvette.png",
+			ufo_corvette_cannon: "ufo_corvette_cannon.png",
 
 			red_streak_bullet: "red_streak_bullet.png",
 			bright_purple_square_bullet: "bright_purple_square_bullet.png",
@@ -737,10 +769,10 @@ function main () {
 
 		game.add_entity(new PlayerShip(game, 320, 240));
 
-		game.add_entity(new UFOStation(game, 320, 0, [
-			{ timeout: 120, sy: 0.1 },
-			{ timeout: 360, repeat: 4, sy: 0.1, call: [{ method: 'fire', args: [320, 240] }] },
-		]));
+		// game.add_entity(new UFOStation(game, 320, 0, [
+		// 	{ timeout: 120, sy: 0.1 },
+		// 	{ timeout: 360, repeat: 4, sy: 0.1, call: [{ method: 'fire', args: [320, 240] }] },
+		// ]));
 
 		// game.add_entity(new UFOPlatform(game, 320, 0, [
 		// 	{ timeout: 1000, sy: 0.5 },
@@ -774,6 +806,12 @@ function main () {
 		// 	{ timeout: 60, repeat: 5, sy: 1, call: [{ method: 'fire', args: [300, 300] }] },
 		// ]));
 
+		game.add_entity(new UFOCorvetteEnemy(game, 320, -100, [
+			{ timeout: 180, angle: 90, speed: 1 },
+			{ timeout: 180, repeat: 2, angle: 90, speed: 0.1, },
+			{ timeout: 180, repeat: 2, angle: 90, da: 90 / (180 * 2), speed: 0.25, },
+			{ timeout: 360, angle: 180, speed: 0.75, },
+		]));
 		// game.add_entity(new UFOCorsairEnemy(game, 320, -100, [
 		// 	{ timeout: 180, angle: 90, speed: 1 },
 		// 	{ timeout: 180, repeat: 2, angle: 90, speed: 0.1, call: [{ method: 'fire' }] },
