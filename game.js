@@ -849,6 +849,15 @@ function main () {
 
 
 		game.game_systems.collision_system = new CircularCollisionSystem(game);
+		game.game_systems.input_manager = new InputManager(game);
+		game.game_systems.input_manager.input_handlers.push({
+			type: 'pressed',
+			key: 'O',
+			callback: function (game) {
+				game.game_systems.debug_system.visible = !game.game_systems.debug_system.visible;
+			},
+		})
+
 		game.game_systems.debug_system = new DebugSystem(game);
 		game.game_systems.debug_system.visible = false;
 

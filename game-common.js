@@ -1455,3 +1455,46 @@ RenderedGridSystem.prototype.update_render = function(p, w, h) {
 // 	}
 // };
 
+
+function SoundManager(game) {
+	Entity.call(this, game);
+
+	this.background_music = undefined;
+}
+SoundManager.prototype = Object.create(Entity.prototype);
+SoundManager.prototype.play_background_music = function(background_music) {
+	if (this.background_music)
+		this.background_music.stop();
+	this.background_music = background_music;
+	this.background_music.loop = true;
+	this.background_music.play();
+};
+
+
+
+function InputManager(game) {
+	Entity.call(this, game);
+	this.input_handlers = [];
+}
+InputManager.prototype = Object.create(Entity.prototype);
+InputManager.prototype.update = function(game) {
+	Entity.prototype.update.call(this, game);
+	for (var i = 0; i < this.input_handlers.length; i++) {
+		if (this.input_handlers[i].type === 'down') {
+			if (game.keystate[this.input_handlers[i].key]) {
+				this.input_handlers[i].callback(game);
+			}
+		} else if (this.input_handlers[i].type === 'up') {
+			if (!game.keystate[this.input_handlers[i].key]) {
+				this.input_handlers[i].callback(game);
+			}
+		} else if (this.input_handlers[i].type === 'pressed') {
+			if (game.keystate[this.input_handlers[i].key] && !game.previous_keystate[this.input_handlers[i].key]) {
+				this.input_handlers[i].callback(game);
+			}
+		}
+	}
+};
+
+
+
