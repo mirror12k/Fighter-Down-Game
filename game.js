@@ -97,6 +97,65 @@ PlayerBullet.prototype.hit_enemy = function(game, enemy) {
 	game.particle_systems.red_particles.add_particle(this.px, this.py, 3);
 };
 
+function PlayerMissile(game, px, py, path) {
+	PathEntity.call(this, game, px, py, 32, 10, game.images.fighter_missile, path);
+	this.angle_granularity = 5;
+	this.entity_tags.push(new CollisionEntityTag());
+}
+PlayerMissile.prototype = Object.create(PathEntity.prototype);
+PlayerMissile.prototype.collision_radius = 16;
+PlayerMissile.prototype.collision_map = [
+	{
+		class: EnemyEntity,
+		callback: 'hit_enemy',
+	},
+	{
+		class: EnemyEntity,
+		container_class: EnemyContainerEntity,
+		callback: 'hit_enemy',
+	},
+];
+PlayerMissile.prototype.update = function(game) {
+	PathEntity.prototype.update.call(this, game);
+	var self = this;
+
+	// find enemies and sort by distance
+	var enemies = game.query_entities(EnemyEntity).concat(game.query_entities(EnemyContainerEntity));
+	enemies.sort(function (a, b) { return points_dist(self, a) - points_dist(self, b); });
+
+	// target closest enemy
+	var target = enemies[0];
+	if (target) {
+		// find target angle
+		var angle = point_angle(this.px, this.py, target.px, target.py);
+		// this.angle %= 360;
+		// find angle difference
+		var diff = this.angle - angle;
+		if (diff > 180)
+			diff -= 360;
+		else if (diff < -180)
+			diff += 360;
+
+		// clamp to +/- 15 delta
+		if (diff > 15)
+			diff = 15;
+		else if (diff < -15)
+			diff = -15;
+		// console.log("debug:", this.angle, angle, diff);
+
+		this.path[this.path_index - 1].da = -diff;
+	} else {
+		this.path[this.path_index - 1].da = 0;
+	}
+};
+PlayerMissile.prototype.hit_enemy = function(game, enemy) {
+	enemy.take_damage(game, 25);
+	game.entities_to_remove.push(this);
+	for (var i = 0; i < 5; i++) {
+		game.particle_systems.red_particles.add_particle(this.px, this.py, 5);
+	}
+};
+
 
 
 
@@ -552,16 +611,20 @@ function UFOCorvetteEnemy(game, px, py, path) {
 
 	var cannon = new EnemyEntity(game, 0, -this.height / 3, 48, 48, game.images.ufo_corvette_cannon);
 	cannon.collision_radius = 24;
+	cannon.angle_granularity = 1;
 	this.add_entity(cannon);
 	var cannon = new EnemyEntity(game, 0, this.height / 3, 48, 48, game.images.ufo_corvette_cannon);
 	cannon.collision_radius = 24;
+	cannon.angle_granularity = 1;
 	this.add_entity(cannon);
 
 	var cannon = new EnemyEntity(game, this.width / 3, -this.height / 3, 48, 48, game.images.ufo_corvette_cannon);
 	cannon.collision_radius = 24;
+	cannon.angle_granularity = 1;
 	this.add_entity(cannon);
 	var cannon = new EnemyEntity(game, this.width / 3, this.height / 3, 48, 48, game.images.ufo_corvette_cannon);
 	cannon.collision_radius = 24;
+	cannon.angle_granularity = 1;
 	this.add_entity(cannon);
 }
 UFOCorvetteEnemy.prototype = Object.create(EnemyContainerEntity.prototype);
@@ -569,8 +632,27 @@ UFOCorvetteEnemy.prototype.collision_radius = 32;
 // UFOCorvetteEnemy.prototype.update = function(game) {
 // 	EnemyContainerEntity.prototype.update.call(this, game);
 // };
-// UFOCorvetteEnemy.prototype.fire = function(game) {
-// };
+UFOCorvetteEnemy.prototype.fire = function(game, tx, ty) {
+	for (var i = this.sub_entities.length - 1; i >= 0; i--) {
+		var ent = this.sub_entities[i];
+		var pos = this.get_global_position(ent);
+
+		ent.angle = point_angle(pos.px, pos.py, tx, ty) - this.angle;
+		this.spawn_bullets(game, pos, { px: tx, py: ty });
+	}
+};
+UFOCorvetteEnemy.prototype.spawn_bullets = function(game, from, to) {
+	var target_angle = point_angle(from.px, from.py, to.px, to.py);
+
+	for (var k = -1; k <= 1; k++) {
+		var angle_offset = k * 7;
+		for (var i = 0; i < 4; i++) {
+			game.add_entity(new EnemyBullet(game, from.px, from.py, [
+				{ timeout: 240, angle: target_angle + angle_offset, speed: 1 + i * 0.5 },
+			], game.images.bright_purple_square_bullet));
+		}
+	}
+};
 
 
 function PlayerShip(game, px, py) {
@@ -582,6 +664,7 @@ function PlayerShip(game, px, py) {
 
 	this.tilt_angle = 0;
 	this.fire_timer = 0;
+	this.missile_fire_timer = 0;
 	this.speed = 6;
 
 	this.angle_granularity = 3;
@@ -687,16 +770,31 @@ PlayerShip.prototype.fire = function(game) {
 		game.entities_to_add.push(new PlayerBullet(game, this.px + offset.px, this.py + offset.py, [
 			{ timeout: 40, angle: this.tilt_angle - 90 - 15, speed: 16 },
 		], game.images.red_streak_bullet));
-		offset = d2_point_offset(this.tilt_angle, this.width / 3, -this.height / 2);
+		var offset = d2_point_offset(this.tilt_angle, this.width / 3, -this.height / 2);
 		game.entities_to_add.push(new PlayerBullet(game, this.px + offset.px, this.py + offset.py, [
 			{ timeout: 40, angle: this.tilt_angle - 90 + 15, speed: 16 },
 		], game.images.red_streak_bullet));
+	} else if (this.transformation_step === 0) {
+		if (this.missile_fire_timer) {
+			this.missile_fire_timer--;
+		} else {
+			this.missile_fire_timer = 5;
+
+			var offset = point_offset(this.tilt_angle - 90 + 135, this.width / 2);
+			game.add_entity(new PlayerMissile(game, this.px + offset.px, this.py + offset.py, [
+				{ timeout: 60, angle: this.tilt_angle - 90 + 135, speed: 8 },
+			]));
+			var offset = point_offset(this.tilt_angle - 90 - 135, this.width / 2);
+			game.add_entity(new PlayerMissile(game, this.px + offset.px, this.py + offset.py, [
+				{ timeout: 360, angle: this.tilt_angle - 90 - 135, speed: 8 },
+			]));
+		}
 	}
 	var offset = d2_point_offset(this.tilt_angle, -this.width / 8, -this.height / 2);
 	game.entities_to_add.push(new PlayerBullet(game, this.px + offset.px, this.py + offset.py, [
 		{ timeout: 40, angle: this.tilt_angle - 90, speed: 16 },
 	], game.images.red_streak_bullet));
-	offset = d2_point_offset(this.tilt_angle, this.width / 8, -this.height / 2);
+	var offset = d2_point_offset(this.tilt_angle, this.width / 8, -this.height / 2);
 	game.entities_to_add.push(new PlayerBullet(game, this.px + offset.px, this.py + offset.py, [
 		{ timeout: 40, angle: this.tilt_angle - 90, speed: 16 },
 	], game.images.red_streak_bullet));
@@ -712,6 +810,7 @@ function main () {
 	var assets = {
 		images: {
 			fighter: "fighter.png",
+			fighter_missile: "fighter_missile.png",
 			mini_fighter: "mini_fighter.png",
 			fighter_attack_formation: "fighter_attack_formation.png",
 			fighter_transform_animation: "fighter_transform_animation.png",
@@ -751,7 +850,7 @@ function main () {
 
 		game.game_systems.collision_system = new CircularCollisionSystem(game);
 		game.game_systems.debug_system = new DebugSystem(game);
-		// game.game_systems.debug_system.visible = false;
+		game.game_systems.debug_system.visible = false;
 
 		game.game_systems.debug_system.add_debug_text({
 			update: function (game) {
@@ -808,9 +907,9 @@ function main () {
 
 		game.add_entity(new UFOCorvetteEnemy(game, 320, -100, [
 			{ timeout: 180, angle: 90, speed: 1 },
-			{ timeout: 180, repeat: 2, angle: 90, speed: 0.1, },
-			{ timeout: 180, repeat: 2, angle: 90, da: 90 / (180 * 2), speed: 0.25, },
-			{ timeout: 360, angle: 180, speed: 0.75, },
+			{ timeout: 180, repeat: 2, angle: 90, speed: 0.1, call: [{ method: 'fire', args: [300, 300] }] },
+			{ timeout: 180, repeat: 2, angle: 90, da: 90 / (180 * 2), speed: 0.25, call: [{ method: 'fire', args: [300, 300] }] },
+			{ timeout: 360, angle: 180, speed: 0.75, call: [{ method: 'fire', args: [300, 300] }] },
 		]));
 		// game.add_entity(new UFOCorsairEnemy(game, 320, -100, [
 		// 	{ timeout: 180, angle: 90, speed: 1 },
