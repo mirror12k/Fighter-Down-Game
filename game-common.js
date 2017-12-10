@@ -762,7 +762,7 @@ ParticleEffectSystem.prototype.add_particle = function(px, py, speed, frame, ang
 		}
 	}
 
-	this.particles.push({
+	var particle = {
 		px: px,
 		py: py,
 		sx: sx,
@@ -772,7 +772,10 @@ ParticleEffectSystem.prototype.add_particle = function(px, py, speed, frame, ang
 		frame: frame,
 		timer: this.particle_base_timer,
 		// timer: this.particle_base_timer + Math.floor(Math.random() * (this.particle_max_timer - this.particle_base_timer + 1)),
-	});
+	};
+	this.particles.push(particle);
+
+	return particle;
 };
 ParticleEffectSystem.prototype.add_image_particle = function(image, width, height, px, py, speed) {
 	var sx = ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
@@ -792,7 +795,7 @@ ParticleEffectSystem.prototype.add_image_particle = function(image, width, heigh
 	// var offsetx = Math.random() * width - width / 2;
 	// var offsety = Math.random() * height - height / 2;
 
-	this.particles.push({
+	var particle = {
 		image: image,
 		width: chopped_width,
 		height: chopped_height,
@@ -803,7 +806,9 @@ ParticleEffectSystem.prototype.add_image_particle = function(image, width, heigh
 		sr: Math.random() - 0.5,
 		angle: Math.random() * 360,
 		frame: 0,
-	});
+	};
+	this.particles.push(particle);
+	return particle;
 };
 ParticleEffectSystem.prototype.update = function(game) {
 	for (var i = this.particles.length - 1; i >= 0; i--) {

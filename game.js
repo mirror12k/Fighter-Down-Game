@@ -55,9 +55,46 @@ CircularCollisionSystem.prototype.update = function(game) {
 			}
 		}
 	}
-
-
 };
+
+
+
+function ScrollingParticleBackground(game, config) {
+	ParticleEffectSystem.call(this, game, config);
+	this.particle_spawn_count = config.particle_spawn_count || 1;
+	this.particle_spawn_density = config.particle_spawn_count || 0.5;
+
+	this.particle_edge_offset = 20;
+}
+ScrollingParticleBackground.prototype = Object.create(ParticleEffectSystem.prototype);
+ScrollingParticleBackground.prototype.constructor = ScrollingParticleBackground;
+ScrollingParticleBackground.prototype.update = function(game) {
+	ParticleEffectSystem.prototype.update.call(this, game);
+
+	for (var i = 0; i < this.particle_spawn_count; i++) {
+		if (Math.random() < this.particle_spawn_density) {
+			var particle = this.add_particle(Math.random() * (game.canvas.width + this.particle_edge_offset * 2) - this.particle_edge_offset,
+					0 - this.particle_edge_offset, 0);
+			particle.sy = 0.1 + Math.random();
+		}
+	}
+
+	if (this.particles.length === 40) {
+		// console.log('debug:', this.particles);
+		
+	}
+	// console.log('debug:', this.particles.length);
+	for (var i = this.particles.length - 1; i >= 0; i--) {
+		if (this.particles[i].y >= game.canvas.height + this.particle_edge_offset) {
+			console.log("remove");
+			this.particles.splice(i, 1);
+		}
+	}
+};
+
+
+
+
 
 
 
@@ -829,6 +866,7 @@ function main () {
 			purple_crystal: "purple_crystal.png",
 			particle_effect_generic: "particle_effect_generic.png",
 			particle_effect_explosion: "particle_effect_explosion.png",
+			particle_star: "particle_star.png",
 
 			asteroid_64: "asteroid_64.png",
 			chop_piece: "chop_piece.png",
@@ -965,6 +1003,13 @@ function main () {
 			particle_longevity: 0.3,
 			particle_respawn: 0.2,
 		});
+		game.particle_systems.star_particles = new ScrollingParticleBackground(game, {
+			particle_image: game.images.particle_star,
+			static_images: true,
+			particle_size: 16,
+			particle_longevity: 0,
+		});
+		// game.particle_systems.star_particles.z_index = -10;
 
 		setInterval(game.step_game_frame.bind(game, ctx), 1000 / 60);
 	});
