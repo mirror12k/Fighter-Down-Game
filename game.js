@@ -63,8 +63,12 @@ function ScrollingParticleBackground(game, config) {
 	ParticleEffectSystem.call(this, game, config);
 	this.particle_spawn_count = config.particle_spawn_count || 1;
 	this.particle_spawn_density = config.particle_spawn_count || 0.5;
+	this.particle_min_speed = config.particle_min_speed || 0.1;
+	this.particle_speed = config.particle_speed || 1;
 
 	this.particle_edge_offset = 20;
+
+	this.init_particles(game);
 }
 ScrollingParticleBackground.prototype = Object.create(ParticleEffectSystem.prototype);
 ScrollingParticleBackground.prototype.constructor = ScrollingParticleBackground;
@@ -74,8 +78,8 @@ ScrollingParticleBackground.prototype.update = function(game) {
 	for (var i = 0; i < this.particle_spawn_count; i++) {
 		if (Math.random() < this.particle_spawn_density) {
 			var particle = this.add_particle(Math.random() * (game.canvas.width + this.particle_edge_offset * 2) - this.particle_edge_offset,
-					0 - this.particle_edge_offset, 0);
-			particle.sy = 0.1 + Math.random();
+					-this.particle_edge_offset, 0);
+			particle.sy = this.particle_min_speed + (Math.random() * this.particle_speed) ** 2;
 		}
 	}
 
@@ -85,13 +89,24 @@ ScrollingParticleBackground.prototype.update = function(game) {
 	}
 	// console.log('debug:', this.particles.length);
 	for (var i = this.particles.length - 1; i >= 0; i--) {
-		if (this.particles[i].y >= game.canvas.height + this.particle_edge_offset) {
-			console.log("remove");
+		if (this.particles[i].py >= game.canvas.height + this.particle_edge_offset) {
 			this.particles.splice(i, 1);
 		}
 	}
 };
 
+
+ScrollingParticleBackground.prototype.init_particles = function(game) {
+	for (var y = -this.particle_edge_offset; y < game.canvas.height + this.particle_edge_offset; y++) {
+		for (var i = 0; i < this.particle_spawn_count; i++) {
+			if (Math.random() < this.particle_spawn_density) {
+				var particle = this.add_particle(Math.random() * (game.canvas.width + this.particle_edge_offset * 2) - this.particle_edge_offset,
+						y, 0);
+				particle.sy = this.particle_min_speed + (Math.random() * this.particle_speed) ** 2;
+			}
+		}
+	}
+};
 
 
 
@@ -906,6 +921,12 @@ function main () {
 			},
 		});
 
+		game.game_systems.debug_system.add_debug_text({
+			update: function (game) {
+				this.text = "# stars: " + game.particle_systems.star_particles.particles.length;
+			},
+		});
+
 		// game.game_systems.debug_system.add_debug_text({
 		// 	update: function (game) {
 		// 		var enemy_entities = game.query_entities(EnemyEntity);
@@ -1006,10 +1027,14 @@ function main () {
 		game.particle_systems.star_particles = new ScrollingParticleBackground(game, {
 			particle_image: game.images.particle_star,
 			static_images: true,
-			particle_size: 16,
-			particle_longevity: 0,
+			particle_size: 8,
+			particle_longevity: -1,
+
+			particle_spawn_count: 1,
+			particle_min_speed: 0.1,
+			particle_speed: 20,
 		});
-		// game.particle_systems.star_particles.z_index = -10;
+		game.particle_systems.star_particles.z_index = -10;
 
 		setInterval(game.step_game_frame.bind(game, ctx), 1000 / 60);
 	});

@@ -418,6 +418,7 @@ GameSystem.prototype.draw = function (ctx) {
 
 	var entities_to_draw = this.entities.slice();
 	var game_systems_to_draw = Object.values(this.game_systems);
+	var particle_systems_to_draw = Object.values(this.particle_systems);
 	entities_to_draw.sort(function (a, b) {
 		return a.z_index - b.z_index;
 	});
@@ -429,25 +430,43 @@ GameSystem.prototype.draw = function (ctx) {
 		if (game_systems_to_draw[i].z_index < 0) {
 			// var start = new Date().getTime(); // DEBUG_TIME
 			game_systems_to_draw[i].draw(ctx);
-			// this.debug_time.game_entity_draw_time[this.particle_systems[keys[i]].class_name] = // DEBUG_TIME
-				// (this.debug_time.game_entity_draw_time[this.particle_systems[keys[i]].class_name] || 0) + new Date().getTime() - start; // DEBUG_TIME
+			// this.debug_time.game_entity_draw_time[game_systems_to_draw[i].class_name] = // DEBUG_TIME
+				// (this.debug_time.game_entity_draw_time[game_systems_to_draw[i].class_name] || 0) + new Date().getTime() - start; // DEBUG_TIME
+		}
+	}
+
+	for (var i = 0; i < particle_systems_to_draw.length; i++) {
+		if (particle_systems_to_draw[i].z_index < 0) {
+			// var start = new Date().getTime(); // DEBUG_TIME
+			particle_systems_to_draw[i].draw(ctx);
+			// this.debug_time.game_entity_draw_time[particle_systems_to_draw[i].class_name] = // DEBUG_TIME
+				// (this.debug_time.game_entity_draw_time[particle_systems_to_draw[i].class_name] || 0) + new Date().getTime() - start; // DEBUG_TIME
 		}
 	}
 
 	for (var i = 0; i < entities_to_draw.length; i++) {
 		// var start = new Date().getTime(); // DEBUG_TIME
 		entities_to_draw[i].draw(ctx);
-		// this.debug_time.game_entity_draw_time[this.entities[i].class_name] = // DEBUG_TIME
-			// (this.debug_time.game_entity_draw_time[this.entities[i].class_name] || 0) + new Date().getTime() - start; // DEBUG_TIME
+		// this.debug_time.game_entity_draw_time[entities_to_draw[i].class_name] = // DEBUG_TIME
+			// (this.debug_time.game_entity_draw_time[entities_to_draw[i].class_name] || 0) + new Date().getTime() - start; // DEBUG_TIME
 	}
 
-	var keys = Object.keys(this.particle_systems);
-	for (var i = 0; i < keys.length; i++) {
-		// var start = new Date().getTime(); // DEBUG_TIME
-		this.particle_systems[keys[i]].draw(ctx);
-		// this.debug_time.game_entity_draw_time[this.particle_systems[keys[i]].class_name] = // DEBUG_TIME
-			// (this.debug_time.game_entity_draw_time[this.particle_systems[keys[i]].class_name] || 0) + new Date().getTime() - start; // DEBUG_TIME
+	for (var i = 0; i < particle_systems_to_draw.length; i++) {
+		if (particle_systems_to_draw[i].z_index >= 0) {
+			// var start = new Date().getTime(); // DEBUG_TIME
+			particle_systems_to_draw[i].draw(ctx);
+			// this.debug_time.game_entity_draw_time[particle_systems_to_draw[i].class_name] = // DEBUG_TIME
+				// (this.debug_time.game_entity_draw_time[particle_systems_to_draw[i].class_name] || 0) + new Date().getTime() - start; // DEBUG_TIME
+		}
 	}
+
+	// var keys = Object.keys(this.particle_systems);
+	// for (var i = 0; i < keys.length; i++) {
+	// 	// var start = new Date().getTime(); // DEBUG_TIME
+	// 	this.particle_systems[keys[i]].draw(ctx);
+	// 	// this.debug_time.game_entity_draw_time[this.particle_systems[keys[i]].class_name] = // DEBUG_TIME
+	// 		// (this.debug_time.game_entity_draw_time[this.particle_systems[keys[i]].class_name] || 0) + new Date().getTime() - start; // DEBUG_TIME
+	// }
 
 	for (var i = 0; i < game_systems_to_draw.length; i++) {
 		if (game_systems_to_draw[i].z_index >= 0) {
@@ -613,6 +632,26 @@ Entity.prototype.get_tag = function(type) {
 		}
 	}
 	return undefined;
+};
+Entity.prototype.add_tag = function(tag) {
+	if (tag.exclusive) {
+		// if tag requires exclusivity with itself, check for an existing tag of the same class
+		var existing = this.get_tag(tag.constructor);
+		if (existing) {
+			if (tag.exclusive === 'reset') {
+				existing.timer = tag.timer;
+			} else if (tag.exclusive === 'stack') {
+				existing.timer += tag.timer;
+			}
+			// else leave the existing tag in place
+			return existing;
+		} else {
+			this.entity_tags.push(tag);
+		}
+	} else {
+		this.entity_tags.push(tag);
+	}
+	return tag;
 };
 Entity.prototype.remove_tag = function(tag) {
 	var index = this.entity_tags.indexOf(tag);
