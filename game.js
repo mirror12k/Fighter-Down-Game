@@ -1014,6 +1014,7 @@ function main () {
 		game.particle_systems.ship_chunks = new ParticleEffectSystem(game, {
 			dynamic_images: true,
 			particle_image: game.images.chop_piece,
+			chopped_images: true,
 			masked_images: true,
 			max_frame: 1,
 			particle_longevity: 0.003, 

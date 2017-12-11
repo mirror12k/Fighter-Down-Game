@@ -766,6 +766,7 @@ function ParticleEffectSystem(game, config) {
 	this.dynamic_images = config.dynamic_images;
 	this.static_images = config.static_images;
 	this.masked_images = config.masked_images;
+	this.chopped_images = config.chopped_images;
 
 	if (this.fill_style !== undefined)
 		this.particle_image = this.render();
@@ -816,16 +817,24 @@ ParticleEffectSystem.prototype.add_particle = function(px, py, speed, frame, ang
 
 	return particle;
 };
-ParticleEffectSystem.prototype.add_image_particle = function(image, width, height, px, py, speed) {
+ParticleEffectSystem.prototype.add_image_particle = function(image, width, height, px, py, speed, angle) {
 	var sx = ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
 	var sy = ((Math.random() - 0.5) * speed) ** 2 - ((Math.random() - 0.5) * speed) ** 2;
 
-	var sourcex = image.width * (Math.random() * 1);
-	var sourcey = image.height * (Math.random() * 1);
-	var chopped_width = width * (Math.random() * 0.25 + 0.25);
-	var chopped_height = height * (Math.random() * 0.25 + 0.25);
+	var particle_width = width;
+	var particle_height = height;
 
-	image = image_lib.image_chop(image, sourcex, sourcey, chopped_width, chopped_height, width, height);
+
+	if (this.chopped_images) {
+		var sourcex = image.width * (Math.random() * 1);
+		var sourcey = image.height * (Math.random() * 1);
+		var chopped_width = width * (Math.random() * 0.25 + 0.25);
+		var chopped_height = height * (Math.random() * 0.25 + 0.25);
+
+		image = image_lib.image_chop(image, sourcex, sourcey, chopped_width, chopped_height, width, height);
+		particle_width = chopped_width;
+		particle_height = chopped_height;
+	}
 	if (this.masked_images) {
 		image = image_lib.image_mask(image, this.particle_image, Math.floor(Math.random() * this.max_frame), this.max_frame);
 		image = image_lib.image_composite(image_lib.image_outline(image, '#000'), image);
@@ -836,15 +845,15 @@ ParticleEffectSystem.prototype.add_image_particle = function(image, width, heigh
 
 	var particle = {
 		image: image,
-		width: chopped_width,
-		height: chopped_height,
+		width: particle_width,
+		height: particle_height,
 		px: px,
 		py: py,
 		sx: sx,
 		sy: sy,
 		sr: Math.random() - 0.5,
 		angle: Math.random() * 360,
-		frame: 0,
+		timer: this.particle_base_timer,
 	};
 	this.particles.push(particle);
 	return particle;
@@ -860,7 +869,7 @@ ParticleEffectSystem.prototype.update = function(game) {
 			this.particles[i].frame = (this.particles[i].frame + this.frame_step) % this.max_frame;
 
 		if (Math.random() < this.particle_longevity) {
-			if (this.static_images) {
+			if (this.static_images || this.dynamic_images) {
 				this.particles[i].timer--;
 				if (this.particles[i].timer <= 0) {
 					if (Math.random() < this.particle_respawn) {
