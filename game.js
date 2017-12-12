@@ -885,6 +885,7 @@ function main () {
 
 			asteroid_64: "asteroid_64.png",
 			chop_piece: "chop_piece.png",
+			pound_sign: "pound_sign.png",
 
 			platform_core: "platform_core.png",
 			platform_sections: "platform_sections.png",
@@ -904,12 +905,25 @@ function main () {
 		game.game_systems.collision_system = new CircularCollisionSystem(game);
 		game.game_systems.input_manager = new InputManager(game);
 		game.game_systems.input_manager.input_handlers.push({
-			type: 'pressed',
+			type: 'key_pressed',
 			key: 'O',
 			callback: function (game) {
 				game.game_systems.debug_system.visible = !game.game_systems.debug_system.visible;
 			},
-		})
+		});
+
+		game.game_systems.ui_container = new Entity(game);
+		game.game_systems.ui_container.z_index = 100;
+		var debug_button = new UIButton(game, 640 - 16, 480 - 16, 32, 32, game.images.pound_sign);
+		debug_button.on_down = function (game) {
+			this.angle = this.angle === 0 ? 90 : 0;
+			game.game_systems.debug_system.visible = !game.game_systems.debug_system.visible;
+		};
+		// debug_button.on_up = function (game) {
+		// 	this.angle = 0;
+		// 	game.game_systems.debug_system.visible = false;
+		// };
+		game.game_systems.ui_container.add_entity(debug_button);
 
 		game.game_systems.debug_system = new DebugSystem(game);
 		game.game_systems.debug_system.visible = false;

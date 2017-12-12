@@ -1532,22 +1532,60 @@ function InputManager(game) {
 InputManager.prototype = Object.create(Entity.prototype);
 InputManager.prototype.update = function(game) {
 	Entity.prototype.update.call(this, game);
+
 	for (var i = 0; i < this.input_handlers.length; i++) {
-		if (this.input_handlers[i].type === 'down') {
+		if (this.input_handlers[i].type === 'key_down') {
 			if (game.keystate[this.input_handlers[i].key]) {
 				this.input_handlers[i].callback(game);
 			}
-		} else if (this.input_handlers[i].type === 'up') {
+		} else if (this.input_handlers[i].type === 'key_up') {
 			if (!game.keystate[this.input_handlers[i].key]) {
 				this.input_handlers[i].callback(game);
 			}
-		} else if (this.input_handlers[i].type === 'pressed') {
+		} else if (this.input_handlers[i].type === 'key_pressed') {
 			if (game.keystate[this.input_handlers[i].key] && !game.previous_keystate[this.input_handlers[i].key]) {
 				this.input_handlers[i].callback(game);
 			}
 		}
 	}
 };
+
+
+function UIButton(game, px, py, width, height, image) {
+	ScreenEntity.call(this, game, px, py, width, height, image);
+	this.pressed = false;
+}
+UIButton.prototype = Object.create(ScreenEntity.prototype);
+UIButton.prototype.update = function(game) {
+	ScreenEntity.prototype.update.call(this, game);
+	
+	if (this.visible) {
+		if (!this.pressed) {
+			if (!game.previous_mouse1_state && game.mouse1_state) {
+				if (Math.abs(game.mouse_position.px - this.px) < this.width / 2 &&
+						Math.abs(game.mouse_position.py - this.py) < this.height / 2) {
+					this.pressed = true;
+					this.on_down(game);
+				}
+			}
+		} else {
+			if (!game.mouse1_state || !(Math.abs(game.mouse_position.px - this.px) < this.width / 2 &&
+					Math.abs(game.mouse_position.py - this.py) < this.height / 2)) {
+				this.pressed = false;
+				this.on_up(game);
+			}
+		}
+	} else {
+		if (this.pressed) {
+			this.pressed = false;
+			this.on_up(game);
+		}
+	}
+};
+// default on_down implementation. overridable
+UIButton.prototype.on_down = function(game) {};
+// default on_up implementation. overridable
+UIButton.prototype.on_up = function(game) {};
 
 
 
