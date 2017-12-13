@@ -917,6 +917,7 @@ function main () {
 		var debug_button = new UIButton(game, 640 - 16, 480 - 16, 32, 32, game.images.pound_sign);
 		debug_button.on_down = function (game) {
 			this.angle = this.angle === 0 ? 90 : 0;
+			// game.update_entities = !game.update_entities;
 			game.game_systems.debug_system.visible = !game.game_systems.debug_system.visible;
 		};
 		// debug_button.on_up = function (game) {

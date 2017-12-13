@@ -281,6 +281,10 @@ function GameSystem(canvas, assets) {
 
 	this.background_color = '#000';
 
+	// edittable global flag which enables/disables updating all basic entities and particle systems
+	// game systems are still updated
+	this.update_entities = true;
+
 	this.debug_time = { game_update_time: 0, game_draw_time: 0, game_entity_draw_time: {}, };
 	this.debug_time_timer = 0;
 
@@ -371,6 +375,7 @@ GameSystem.prototype.step_game_frame = function(ctx) {
 GameSystem.prototype.update = function () {
 	this.context_container = undefined;
 
+	// update all additions and removals to the entity list
 	for (var i = 0; i < this.entities_to_remove.length; i++) {
 		var index = this.entities.indexOf(this.entities_to_remove[i]);
 		if (index >= 0)
@@ -382,16 +387,20 @@ GameSystem.prototype.update = function () {
 		this.entities.push(this.entities_to_add[i]);
 	this.entities_to_add = [];
 
-	try {
-		for (var i = 0; i < this.entities.length; i++) {
-			this.context_container = this.entities[i];
-			this.entities[i].update(this);
+	// update all entities
+	if (this.update_entities) {
+		try {
+			for (var i = 0; i < this.entities.length; i++) {
+				this.context_container = this.entities[i];
+				this.entities[i].update(this);
+			}
+		} catch (e) {
+			console.error('exception during update:', e.message);
+			console.error('exception stack:', e.stack);
 		}
-	} catch (e) {
-		console.error('exception during update:', e.message);
-		console.error('exception stack:', e.stack);
 	}
 
+	// update all game systems
 	var keys = Object.keys(this.game_systems);
 	for (var i = 0; i < keys.length; i++) {
 		this.context_container = this.game_systems[keys[i]];
@@ -400,14 +409,17 @@ GameSystem.prototype.update = function () {
 
 	this.context_container = undefined;
 
-	var keys = Object.keys(this.particle_systems);
-	for (var i = 0; i < keys.length; i++) {
-		this.particle_systems[keys[i]].update(this);
+	// update particle systems
+	if (this.update_entities) {
+		var keys = Object.keys(this.particle_systems);
+		for (var i = 0; i < keys.length; i++) {
+			this.particle_systems[keys[i]].update(this);
+		}
 	}
 
+	// refresh key and mouse states
 	this.previous_keystate = this.keystate;
 	this.keystate = Object.assign({}, this.keystate);
-
 	this.previous_mouse1_state = this.mouse1_state;
 };
 GameSystem.prototype.draw = function (ctx) {
@@ -1104,49 +1116,6 @@ PathEntity.prototype.update = function(game) {
 		}
 	}
 };
-
-
-
-
-// function CollidingEntity(game, px, py, width, height, image, path) {
-// 	PathEntity.call(this, game, px, py, width, height, image, path);
-// }
-// CollidingEntity.prototype = Object.create(PathEntity.prototype);
-// CollidingEntity.prototype.constructor = CollidingEntity;
-// CollidingEntity.prototype.class_name = 'CollidingEntity';
-// CollidingEntity.prototype.collision_radius = 10; // used for circular collision checking
-// CollidingEntity.prototype.collision_map = [];
-// // // example collision map property
-// // CollidingEntity.prototype.collision_map = [
-// // 	{
-// // 		// rectangular_collision: true, // set to true if we need to check box-collisions (no rotation), otherwise circular collision is used
-// // 		class: EnemyEntity, // class we are checking for collision against
-// // 		// container_class: EnemyContainer, // optional class containing the entity we are looking for
-// // 		callback: 'on_hit', // our callback method name, recieves arguments (game, other)
-// // 	},
-// // ];
-
-// CollidingEntity.prototype.update = function(game) {
-// 	PathEntity.prototype.update.call(this, game);
-// 	this.check_collision(game);
-// };
-// CollidingEntity.prototype.check_collision = function(game) {
-// 	for (var i = 0; i < this.collision_map.length; i++) {
-// 		// console.log("debug: ", this.collision_radius + this.collision_map[i].class.prototype.collision_radius);
-// 		var colliding;
-// 		if (this.collision_map[i].rectangular_collision)
-// 			colliding = game.find_colliding_rectangular(this, this.collision_map[i].class);
-// 		else if (this.collision_map[i].container_class)
-// 			colliding = game.find_colliding_circular_nested(this, this.collision_map[i].container_class, this.collision_map[i].class, this.collision_radius);
-// 		else
-// 			colliding = game.find_colliding_circular(this, this.collision_map[i].class, this.collision_radius);
-// 		// var colliding = game.find_near_dynamic(this, this.collision_map[i].class, this.collision_radius);
-// 		for (var k = 0; k < colliding.length; k++) {
-// 			this[this.collision_map[i].callback](game, colliding[k]);
-// 		}
-// 	}
-// };
-
 
 
 
