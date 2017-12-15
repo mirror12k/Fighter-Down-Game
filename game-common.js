@@ -120,6 +120,12 @@ function point_angle(fromx, fromy, tox, toy) {
 	return angle / Math.PI * 180;
 }
 
+function points_angle(from, to) {
+	var angle = Math.atan2(to.py - from.py, to.px - from.px);
+	// console.log("angle: ", angle / Math.PI * 180);
+	return angle / Math.PI * 180;
+}
+
 var image_lib = {
 
 	// renders a canvas with the given image textured by the texture
@@ -423,10 +429,10 @@ GameSystem.prototype.update = function () {
 	this.previous_mouse1_state = this.mouse1_state;
 };
 GameSystem.prototype.draw = function (ctx) {
-	ctx.clearRect(0, 0, 640, 480);
+	ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
 	ctx.fillStyle = this.background_color;
-	ctx.fillRect(0, 0, 640, 480);
+	ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
 	var entities_to_draw = this.entities.slice();
 	var game_systems_to_draw = Object.values(this.game_systems);
