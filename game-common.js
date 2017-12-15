@@ -1134,6 +1134,8 @@ function DebugSystem(game) {
 	this.next_debug_rays = [];
 	this.debug_squares = [];
 	this.next_debug_squares = [];
+	this.debug_shapes = [];
+	this.next_debug_shapes = [];
 }
 DebugSystem.prototype = Object.create(Entity.prototype);
 DebugSystem.prototype.update = function(game) {
@@ -1141,6 +1143,8 @@ DebugSystem.prototype.update = function(game) {
 	this.next_debug_rays = [];
 	this.debug_squares = this.next_debug_squares;
 	this.next_debug_squares = [];
+	this.debug_shapes = this.next_debug_shapes;
+	this.next_debug_shapes = [];
 
 	for (var i = 0; i < this.debug_text_entries.length; i++) {
 		if (this.debug_text_entries[i]) {
@@ -1160,6 +1164,10 @@ DebugSystem.prototype.draw = function(ctx) {
 
 		for (var i = 0; i < this.debug_squares.length; i++) {
 			this.draw_debug_square(ctx, this.debug_squares[i]);
+		}
+
+		for (var i = 0; i < this.debug_shapes.length; i++) {
+			this.draw_debug_shape(ctx, this.debug_shapes[i]);
 		}
 	}
 };
@@ -1205,6 +1213,22 @@ DebugSystem.prototype.draw_debug_square = function(ctx, square) {
 	
 	ctx.stroke();
 };
+DebugSystem.prototype.draw_debug_shape = function(ctx, shape) {
+	ctx.save();
+
+	ctx.globalAlpha = shape.alpha;
+	ctx.fillStyle = shape.color;
+	
+	ctx.beginPath();
+	if (shape.type === 'ellipse') {
+		ctx.ellipse(shape.pxy.px, shape.pxy.py, shape.width / 2, shape.height / 2, 0, 0, 360);
+	} else if (shape.type === 'rectangle') {
+		ctx.rect(square.pxy.px - shape.width / 2, square.pxy.py - shape.height / 2, shape.width, shape.height);
+	}
+	ctx.fill();
+	
+	ctx.restore();
+};
 DebugSystem.prototype.add_debug_text = function(entry) {
 	this.debug_text_entries.push({
 		text: entry.text,
@@ -1227,6 +1251,16 @@ DebugSystem.prototype.add_debug_square = function(pxy, width, color, thickness) 
 		width: width || 10,
 		color: color || '#f00',
 		thickness: thickness || 1,
+	});
+};
+DebugSystem.prototype.add_debug_shape = function(type, pxy, width, height, color, alpha) {
+	this.next_debug_shapes.push({
+		type: type,
+		pxy: pxy,
+		width: width || 10,
+		height: height || 10,
+		color: color || '#f00',
+		alpha: alpha || 1,
 	});
 };
 
