@@ -759,6 +759,7 @@ function ParticleEffectSystem(game, config) {
 	ScreenEntity.call(this, game);
 	this.fill_style = config.fill_style;
 	this.particle_image = config.particle_image || game.images.particle_effect_generic;
+	this.composite_operation = config.composite_operation || 'source-over';
 
 	this.particles = [];
 
@@ -916,6 +917,7 @@ ParticleEffectSystem.prototype.draw = function(ctx) {
 			var p = this.particles[i];
 			ctx.save();
 
+			ctx.globalCompositeOperation = this.composite_operation;
 			ctx.translate(p.px, p.py);
 			ctx.rotate(Math.PI * (Math.floor(p.angle / 15) * 15) / 180);
 			var width = this.particle_width;
