@@ -737,7 +737,11 @@ PlayerShip.prototype.collision_map = [
 	{
 		class: EnemyBullet,
 		callback: 'hit_bullet',
-	}
+	},
+	{
+		class: EnemyEntity,
+		callback: 'hit_enemy',
+	},
 ];
 PlayerShip.prototype.update = function(game) {
 	PathEntity.prototype.update.call(this, game);
@@ -824,6 +828,10 @@ PlayerShip.prototype.update = function(game) {
 PlayerShip.prototype.hit_bullet = function(game, bullet) {
 	this.on_death(game);
 	game.remove_entity(bullet);
+	game.remove_entity(this);
+};
+PlayerShip.prototype.hit_enemy = function(game, bullet) {
+	this.on_death(game);
 	game.remove_entity(this);
 };
 PlayerShip.prototype.on_death = function(game) {
