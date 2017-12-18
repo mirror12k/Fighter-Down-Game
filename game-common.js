@@ -126,16 +126,29 @@ function points_angle(from, to) {
 	return angle / Math.PI * 180;
 }
 
-function rotate_90(p) {
+function point_rotate_90(p) {
 	return { px: -p.py, py: p.px };
 }
 
-function rotate_180(p) {
+function point_rotate_180(p) {
 	return { px: -p.px, py: -p.py };
 }
 
-function rotate_270(p) {
+function point_rotate_270(p) {
 	return { px: p.py, py: -p.px };
+}
+
+
+function angle_diff(a, b) {
+	var diff = a - b;
+	while (diff > 180) {
+		diff -= 360;
+	}
+	while (diff < -180) {
+		diff += 360;
+	}
+
+	return diff;
 }
 
 var image_lib = {
