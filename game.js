@@ -590,15 +590,15 @@ PointSuppressionDrone.prototype.fire = function(game) {
 };
 
 function TargetSuppressionDrone(game, px, py, path) {
-	EnemyEntity.call(this, game, px, py, 40, 40, game.images.point_defense_drone, path);
-	this.health = 400;
+	EnemyEntity.call(this, game, px, py, 80, 80, game.images.point_defense_drone, path);
+	this.health = 800;
 	this.angle = Math.random() * 360;
 	this.rotation = 0.5;
 
 	this.firing = 0;
 }
 TargetSuppressionDrone.prototype = Object.create(EnemyEntity.prototype);
-TargetSuppressionDrone.prototype.collision_radius = 16;
+TargetSuppressionDrone.prototype.collision_radius = 36;
 TargetSuppressionDrone.prototype.update = function(game) {
 	EnemyEntity.prototype.update.call(this, game);
 	if (this.firing > 0) {
@@ -613,7 +613,7 @@ TargetSuppressionDrone.prototype.fire = function(game, target) {
 TargetSuppressionDrone.prototype.spawn_bullets = function(game) {
 	if (Math.random() < 0.5) {
 		var spawn_angle = Math.random() * 360;
-		var spawn_offset = point_offset(spawn_angle, this.width / 2 + Math.random() * this.width * 2);
+		var spawn_offset = point_offset(spawn_angle, this.width / 2 + Math.random() * this.width);
 		var target_angle = point_angle(this.px + spawn_offset.px, this.py + spawn_offset.py, this.fire_target.px, this.fire_target.py);
 		game.add_entity(new EnemyBullet(game, this.px, this.py, [
 			{ timeout: 10, px: this.px + spawn_offset.px, py: this.py + spawn_offset.py },
@@ -944,6 +944,89 @@ PickupBox.prototype = Object.create(PathEntity.prototype);
 PickupBox.prototype.collision_radius = 20;
 
 
+function PlayerFamiliarShip(game, px, py, parent_ship) {
+	PathEntity.call(this, game, px, py, 32, 32, game.images.mini_fighter);
+	this.angle_granularity = 3;
+
+	this.fire_timer = 0;
+	this.speed = 4;
+	this.parent_ship = parent_ship;
+}
+PlayerFamiliarShip.prototype = Object.create(PathEntity.prototype);
+PlayerFamiliarShip.prototype.update = function(game) {
+	PathEntity.prototype.update.call(this, game);
+
+	if (this.formation) {
+		if (game.keystate.shift) {
+			var target_position = {
+				px: this.parent_ship.px + this.formation.px / 2,
+				py: this.parent_ship.py + this.formation.py / 2,
+			};
+			
+		} else {
+			var target_position = {
+				px: this.parent_ship.px + this.formation.px,
+				py: this.parent_ship.py + this.formation.py,
+			};
+		}
+
+
+		var speedx;
+		if (Math.abs(this.px - target_position.px) < 5) {
+			speedx = this.speed / 4;
+		} else if (Math.abs(this.px - target_position.px) < 10) {
+			speedx = this.speed / 2;
+		} else {
+			speedx = this.speed;
+		}
+		if (this.px + speedx < target_position.px) {
+			this.px += speedx;
+			if (this.angle < 15)
+				this.angle++;
+		} else if (this.px + -speedx > target_position.px) {
+			this.px += -speedx;
+			if (this.angle > -15)
+				this.angle--;
+		} else {
+			if (this.angle > 0)
+				this.angle--;
+			else if (this.angle < 0)
+				this.angle++;
+		}
+
+		var speedy;
+		if (Math.abs(this.py - target_position.py) < 5) {
+			speedy = this.speed / 4;
+		} else if (Math.abs(this.py - target_position.py) < 10) {
+			speedy = this.speed / 2;
+		} else {
+			speedy = this.speed;
+		}
+
+		if (this.py + speedy < target_position.py) {
+			this.py += speedy;
+		} else if (this.py + -speedy > target_position.py) {
+			this.py += -speedy;
+		}
+	}
+
+	if (this.fire_timer) {
+		this.fire_timer--;
+	} else {
+		if (game.keystate[' ']) {
+			this.fire(game);
+			this.fire_timer = 7;
+		}
+	}
+};
+PlayerFamiliarShip.prototype.fire = function(game) {
+	var offset = point_offset(this.angle - 90, this.height / 2);
+	game.entities_to_add.push(new PlayerBullet(game, this.px + offset.px, this.py + offset.py, [
+		{ timeout: 40, angle: this.angle - 90, speed: 16 },
+	], game.images.red_streak_bullet));
+};
+
+
 function PlayerShip(game, px, py) {
 	PathEntity.call(this, game, px, py, 64, 64, game.images.fighter_transform_animation);
 	this.max_frame = 8;
@@ -970,6 +1053,13 @@ function PlayerShip(game, px, py) {
 	cross.rotation = -1;
 	cross.angle_granularity = 1;
 	this.ui_entities.push(cross);
+
+	var familiar = new PlayerFamiliarShip(game, this.px, this.py, this);
+	familiar.formation = { px: -this.width, py: this.height / 2 };
+	game.add_entity(familiar);
+	var familiar = new PlayerFamiliarShip(game, this.px, this.py, this);
+	familiar.formation = { px: this.width, py: this.height / 2 };
+	game.add_entity(familiar);
 }
 PlayerShip.prototype = Object.create(PathEntity.prototype);
 PlayerShip.prototype.collision_radius = 8;
