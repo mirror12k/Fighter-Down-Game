@@ -208,6 +208,40 @@ PlayerMissile.prototype.hit_enemy = function(game, enemy) {
 	}
 };
 
+function PlayerTorpedo(game, px, py, path) {
+	PathEntity.call(this, game, px, py, 32, 10, game.images.fighter_torpedo, path);
+	this.max_frame = 2;
+	this.frame_step = 0;
+	this.angle_granularity = 5;
+	this.entity_tags.push(new CollisionEntityTag());
+}
+PlayerTorpedo.prototype = Object.create(PathEntity.prototype);
+PlayerTorpedo.prototype.collision_radius = 8;
+PlayerTorpedo.prototype.collision_map = [
+	{
+		class: EnemyEntity,
+		callback: 'hit_enemy',
+	},
+	{
+		class: EnemyEntity,
+		container_class: EnemyContainerEntity,
+		callback: 'hit_enemy',
+	},
+];
+PlayerTorpedo.prototype.update = function(game) {
+	PathEntity.prototype.update.call(this, game);
+
+	this.frame_step = (this.frame_step + 1) % 10;
+	this.frame = Math.floor(this.frame_step / 5);
+};
+PlayerTorpedo.prototype.hit_enemy = function(game, enemy) {
+	enemy.take_damage(game, 100);
+	game.entities_to_remove.push(this);
+	for (var i = 0; i < 20; i++) {
+		game.particle_systems.red_particles.add_particle(this.px, this.py, 6);
+	}
+};
+
 
 
 
@@ -828,16 +862,19 @@ function PlayerShip(game, px, py) {
 	this.tilt_angle = 0;
 	this.fire_timer = 0;
 	this.missile_fire_timer = 0;
+	this.torpedo_fire_timer = 0;
 	this.speed = 6;
 
 	this.angle_granularity = 3;
 
 	this.entity_tags.push(new CollisionEntityTag());
 	var cross = new ScreenEntity(game, 0, 0, 64, 64, game.images.ui_position_cross);
+	cross.alpha = 0.5;
 	cross.rotation = 1;
 	cross.angle_granularity = 1;
 	this.ui_entities.push(cross);
 	var cross = new ScreenEntity(game, 0, 0, 64, 64, game.images.ui_position_cross);
+	cross.alpha = 0.5;
 	cross.rotation = -1;
 	cross.angle_granularity = 1;
 	this.ui_entities.push(cross);
@@ -971,18 +1008,36 @@ PlayerShip.prototype.on_death = function(game) {
 };
 PlayerShip.prototype.fire = function(game) {
 	if (this.transformation_step >= 12) {
-		if (this.missile_fire_timer) {
-			this.missile_fire_timer--;
-		} else {
-			this.missile_fire_timer = 5;
+		// if (this.missile_fire_timer) {
+		// 	this.missile_fire_timer--;
+		// } else {
+		// 	this.missile_fire_timer = 5;
 
-			var offset = point_offset(this.tilt_angle - 90 + 135, this.width / 2);
-			game.add_entity(new PlayerMissile(game, this.px + offset.px, this.py + offset.py, [
-				{ timeout: 60, angle: this.tilt_angle - 90 + 135, speed: 8 },
+		// 	var offset = point_offset(this.tilt_angle - 90 + 135, this.width / 2);
+		// 	game.add_entity(new PlayerMissile(game, this.px + offset.px, this.py + offset.py, [
+		// 		{ timeout: 60, angle: this.tilt_angle - 90 + 135, speed: 8 },
+		// 	]));
+		// 	var offset = point_offset(this.tilt_angle - 90 - 135, this.width / 2);
+		// 	game.add_entity(new PlayerMissile(game, this.px + offset.px, this.py + offset.py, [
+		// 		{ timeout: 60, angle: this.tilt_angle - 90 - 135, speed: 8 },
+		// 	]));
+		// }
+		if (this.torpedo_fire_timer) {
+			this.torpedo_fire_timer--;
+		} else {
+			this.torpedo_fire_timer = 10;
+
+			var offset = point_offset(this.tilt_angle - 90 + 135, this.width / 4);
+			var offset_speed = point_offset(this.tilt_angle - 90 + 135, 2);
+			game.add_entity(new PlayerTorpedo(game, this.px + offset.px, this.py + offset.py, [
+				{ timeout: 10, angle: this.tilt_angle - 90, sx: offset_speed.px, sy: offset_speed.py, },
+				{ timeout: 60, angle: this.tilt_angle - 90, speed: 8 },
 			]));
-			var offset = point_offset(this.tilt_angle - 90 - 135, this.width / 2);
-			game.add_entity(new PlayerMissile(game, this.px + offset.px, this.py + offset.py, [
-				{ timeout: 360, angle: this.tilt_angle - 90 - 135, speed: 8 },
+			var offset = point_offset(this.tilt_angle - 90 - 135, this.width / 4);
+			var offset_speed = point_offset(this.tilt_angle - 90 - 135, 2);
+			game.add_entity(new PlayerTorpedo(game, this.px + offset.px, this.py + offset.py, [
+				{ timeout: 10, angle: this.tilt_angle - 90, sx: offset_speed.px, sy: offset_speed.py, },
+				{ timeout: 60, angle: this.tilt_angle - 90, speed: 8 },
 			]));
 		}
 	} else if (this.transformation_step === 0) {
@@ -1016,6 +1071,7 @@ function main () {
 		images: {
 			fighter: "fighter.png",
 			fighter_missile: "fighter_missile.png",
+			fighter_torpedo: "fighter_torpedo.png",
 			mini_fighter: "mini_fighter.png",
 			fighter_attack_formation: "fighter_attack_formation.png",
 			fighter_transform_animation: "fighter_transform_animation.png",
@@ -1155,12 +1211,12 @@ function main () {
 		// 	{ timeout: 60, repeat: 5, sy: 1, call: [{ method: 'fire', args: [300, 300] }] },
 		// ]));
 
-		// game.add_entity(new UFOCorvetteEnemy(game, 320, -100, [
-		// 	{ timeout: 180, angle: 90, speed: 1 },
-		// 	{ timeout: 180, repeat: 2, angle: 90, speed: 0.1, call: [{ method: 'fire', args: [300, 300] }] },
-		// 	{ timeout: 180, repeat: 2, angle: 90, da: 90 / (180 * 2), speed: 0.25, call: [{ method: 'fire', args: [300, 300] }] },
-		// 	{ timeout: 360, angle: 180, speed: 0.75, call: [{ method: 'fire', args: [300, 300] }] },
-		// ]));
+		game.add_entity(new UFOCorvetteEnemy(game, 320, -100, [
+			{ timeout: 180, angle: 90, speed: 1 },
+			{ timeout: 180, repeat: 2, angle: 90, speed: 0.1, call: [{ method: 'fire_at', args: [PlayerShip] }] },
+			{ timeout: 180, repeat: 2, angle: 90, da: 90 / (180 * 2), speed: 0.25, call: [{ method: 'fire_at', args: [PlayerShip] }] },
+			{ timeout: 360, angle: 180, speed: 0.75, call: [{ method: 'fire_at', args: [PlayerShip] }] },
+		]));
 		// game.add_entity(new UFOCorsairEnemy(game, 320, -100, [
 		// 	{ timeout: 180, angle: 90, speed: 1 },
 		// 	{ timeout: 180, repeat: 2, angle: 90, speed: 0.1, call: [{ method: 'fire' }] },
