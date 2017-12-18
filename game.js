@@ -697,7 +697,7 @@ UFOCorvetteEnemy.prototype.spawn_bullets = function(game, from, to) {
 	var target_angle = point_angle(from.px, from.py, to.px, to.py);
 
 	for (var k = -1; k <= 1; k++) {
-		var angle_offset = k * 7;
+		var angle_offset = k * 10;
 		for (var i = 0; i < 4; i++) {
 			game.add_entity(new EnemyBullet(game, from.px, from.py, [
 				{ timeout: 240, angle: target_angle + angle_offset, speed: 1 + i * 0.5 },
@@ -722,9 +722,17 @@ function PlayerShip(game, px, py) {
 	this.angle_granularity = 3;
 
 	this.entity_tags.push(new CollisionEntityTag());
+	var cross = new ScreenEntity(game, 0, 0, 64, 64, game.images.ui_position_cross);
+	cross.rotation = 1;
+	cross.angle_granularity = 1;
+	this.ui_entities.push(cross);
+	var cross = new ScreenEntity(game, 0, 0, 64, 64, game.images.ui_position_cross);
+	cross.rotation = -1;
+	cross.angle_granularity = 1;
+	this.ui_entities.push(cross);
 }
 PlayerShip.prototype = Object.create(PathEntity.prototype);
-PlayerShip.prototype.collision_radius = 16;
+PlayerShip.prototype.collision_radius = 8;
 PlayerShip.prototype.collision_map = [
 	{
 		class: EnemyBullet,
@@ -814,7 +822,33 @@ PlayerShip.prototype.update = function(game) {
 	// }
 };
 PlayerShip.prototype.hit_bullet = function(game, bullet) {
-	game.entities_to_remove.push(bullet);
+	this.on_death(game);
+	game.remove_entity(bullet);
+	game.remove_entity(this);
+};
+PlayerShip.prototype.on_death = function(game) {
+
+	var p = { px: this.px, py: this.py };
+	// if (this.parent instanceof EnemyContainerEntity) {
+	// 	p = this.parent.get_global_position(this);
+	// }
+
+	var count = 24 + Math.random() * 32;
+	for (var i = 0; i < count; i++) {
+		var offsetx = (Math.random() * this.width - (this.width / 2)) / 1.5;
+		var offsety = (Math.random() * this.height - (this.height / 2)) / 1.5;
+		game.particle_systems.explosion_particles.add_particle(p.px + offsetx, p.py + offsety, 2);
+	}
+	var count = Math.floor(2 + Math.random() * 2);
+	for (var i = 0; i < count; i++) {
+		game.particle_systems.ship_chunks.add_image_particle(this.image, this.width, this.height, p.px, p.py, 3);
+	}
+
+	for (var i = 0; i < this.sub_entities.length; i++) {
+		if (this.sub_entities[i] instanceof EnemyEntity) {
+			this.sub_entities[i].on_death(game);
+		}
+	}
 };
 PlayerShip.prototype.fire = function(game) {
 	if (this.transformation_step >= 12) {
@@ -893,6 +927,8 @@ function main () {
 			ufo_station_core: "ufo_station_core.png",
 			ufo_station_pylon: "ufo_station_pylon.png",
 			ufo_station_pylon2: "ufo_station_pylon2.png",
+
+			ui_position_cross: "ui_position_cross.png",
 		},
 	};
 
