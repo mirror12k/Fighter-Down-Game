@@ -458,7 +458,7 @@ function Asteroid(game, px, py, size, path) {
 	this.rotation = Math.random() * 2 - 1;
 }
 Asteroid.prototype = Object.create(EnemyEntity.prototype);
-CannonAsteroid.prototype.collision_radius = 32;
+Asteroid.prototype.collision_radius = 32;
 
 function CannonAsteroid(game, px, py, size, path) {
 	EnemyContainerEntity.call(this, game, px, py, Math.floor(size * 64), Math.floor(size * 64), game.images.asteroid_64, path);
@@ -478,6 +478,28 @@ function CannonAsteroid(game, px, py, size, path) {
 }
 CannonAsteroid.prototype = Object.create(EnemyContainerEntity.prototype);
 CannonAsteroid.prototype.collision_radius = 32;
+
+function PointSuppressionDrone(game, px, py, path) {
+	EnemyEntity.call(this, game, px, py, 40, 40, game.images.point_defense_drone, path);
+	this.health = 400;
+	this.angle = Math.random() * 360;
+	this.rotation = 0.5;
+}
+PointSuppressionDrone.prototype = Object.create(EnemyEntity.prototype);
+PointSuppressionDrone.prototype.collision_radius = 16;
+PointSuppressionDrone.prototype.fire = function(game) {
+	var spread = 5;
+	for (var i = 0; i <= 60 / spread; i++) {
+		game.add_entity(new EnemyBullet(game, this.px, this.py, [
+			{ timeout: 50, angle: this.angle + i * spread, speed: 4 },
+		], game.images.bright_purple_square_bullet));
+	}
+	for (var i = 0; i <= 60 / spread; i++) {
+		game.add_entity(new EnemyBullet(game, this.px, this.py, [
+			{ timeout: 50, angle: this.angle + 180 + i * spread, speed: 4 },
+		], game.images.bright_purple_square_bullet));
+	}
+};
 
 
 
@@ -949,15 +971,6 @@ PlayerShip.prototype.on_death = function(game) {
 };
 PlayerShip.prototype.fire = function(game) {
 	if (this.transformation_step >= 12) {
-		var offset = d2_point_offset(this.tilt_angle, -this.width / 3, -this.height / 2);
-		game.entities_to_add.push(new PlayerBullet(game, this.px + offset.px, this.py + offset.py, [
-			{ timeout: 40, angle: this.tilt_angle - 90 - 15, speed: 16 },
-		], game.images.red_streak_bullet));
-		var offset = d2_point_offset(this.tilt_angle, this.width / 3, -this.height / 2);
-		game.entities_to_add.push(new PlayerBullet(game, this.px + offset.px, this.py + offset.py, [
-			{ timeout: 40, angle: this.tilt_angle - 90 + 15, speed: 16 },
-		], game.images.red_streak_bullet));
-	} else if (this.transformation_step === 0) {
 		if (this.missile_fire_timer) {
 			this.missile_fire_timer--;
 		} else {
@@ -972,6 +985,15 @@ PlayerShip.prototype.fire = function(game) {
 				{ timeout: 360, angle: this.tilt_angle - 90 - 135, speed: 8 },
 			]));
 		}
+	} else if (this.transformation_step === 0) {
+		var offset = d2_point_offset(this.tilt_angle, -this.width / 3, -this.height / 2);
+		game.entities_to_add.push(new PlayerBullet(game, this.px + offset.px, this.py + offset.py, [
+			{ timeout: 40, angle: this.tilt_angle - 90 - 15, speed: 16 },
+		], game.images.red_streak_bullet));
+		var offset = d2_point_offset(this.tilt_angle, this.width / 3, -this.height / 2);
+		game.entities_to_add.push(new PlayerBullet(game, this.px + offset.px, this.py + offset.py, [
+			{ timeout: 40, angle: this.tilt_angle - 90 + 15, speed: 16 },
+		], game.images.red_streak_bullet));
 	}
 	var offset = d2_point_offset(this.tilt_angle, -this.width / 8, -this.height / 2);
 	game.entities_to_add.push(new PlayerBullet(game, this.px + offset.px, this.py + offset.py, [
@@ -1004,6 +1026,13 @@ function main () {
 			ufo_corvette_cannon: "ufo_corvette_cannon.png",
 			small_cannon_base: "small_cannon_base.png",
 			small_cannon_turret: "small_cannon_turret.png",
+			point_defense_drone: "point_defense_drone.png",
+
+			platform_core: "platform_core.png",
+			platform_sections: "platform_sections.png",
+			ufo_station_core: "ufo_station_core.png",
+			ufo_station_pylon: "ufo_station_pylon.png",
+			ufo_station_pylon2: "ufo_station_pylon2.png",
 
 			red_streak_bullet: "red_streak_bullet.png",
 			bright_purple_square_bullet: "bright_purple_square_bullet.png",
@@ -1019,13 +1048,6 @@ function main () {
 			asteroid_64: "asteroid_64.png",
 			chop_piece: "chop_piece.png",
 			pound_sign: "pound_sign.png",
-
-			platform_core: "platform_core.png",
-			platform_sections: "platform_sections.png",
-
-			ufo_station_core: "ufo_station_core.png",
-			ufo_station_pylon: "ufo_station_pylon.png",
-			ufo_station_pylon2: "ufo_station_pylon2.png",
 
 			ui_position_cross: "ui_position_cross.png",
 		},
@@ -1107,15 +1129,25 @@ function main () {
 		// 	{ timeout: 640, sx: 1 },
 		// ]));
 
-		for (var i = 0; i < 8; i++) {
-			game.add_entity(new CannonAsteroid(game, Math.random() * (640 + 200) - 100, -100 - Math.random() * 200, 1, [
-				{ px: Math.random() * (640 + 200) - 100, py: 800, speed: 1.5 },
-			]));
-		}
+		// for (var i = 0; i < 8; i++) {
+		// 	game.add_entity(new CannonAsteroid(game, Math.random() * (640 + 200) - 100, -100 - Math.random() * 200, 1, [
+		// 		{ px: Math.random() * (640 + 200) - 100, py: 800, speed: 1.5 },
+		// 	]));
+		// }
 
-		game.add_entity(new UFOEnemy(game, 100,-100, [
+		// game.add_entity(new UFOEnemy(game, 100,-100, [
+		// 	{ timeout: 120, sy: 1 },
+		// 	{ timeout: 120, repeat: 5, sy: 1, call: [{ method: 'fire_at', args: [PlayerShip] }] },
+		// ]));
+
+		game.add_entity(new PointSuppressionDrone(game, 100,-100, [
 			{ timeout: 120, sy: 1 },
-			{ timeout: 120, repeat: 5, sy: 1, call: [{ method: 'fire_at', args: [PlayerShip] }] },
+			{ timeout: 30, repeat: 25, sy: 1, call: [{ method: 'fire' }] },
+		]));
+
+		game.add_entity(new PointSuppressionDrone(game, 500,-400, [
+			{ timeout: 240, sy: 1 },
+			{ timeout: 30, repeat: 25, sy: 1, call: [{ method: 'fire' }] },
 		]));
 
 		// game.add_entity(new UFOEnemy(game, 640 - 100, 100, [
