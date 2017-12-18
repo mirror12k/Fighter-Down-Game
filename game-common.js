@@ -126,6 +126,18 @@ function points_angle(from, to) {
 	return angle / Math.PI * 180;
 }
 
+function rotate_90(p) {
+	return { px: -p.py, py: p.px };
+}
+
+function rotate_180(p) {
+	return { px: -p.px, py: -p.py };
+}
+
+function rotate_270(p) {
+	return { px: p.py, py: -p.px };
+}
+
 var image_lib = {
 
 	// renders a canvas with the given image textured by the texture
