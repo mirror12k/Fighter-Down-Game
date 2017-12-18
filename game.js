@@ -110,6 +110,66 @@ ScrollingParticleBackground.prototype.init_particles = function(game) {
 
 
 
+function UIRasterText(game, px, py, width_multiplier, height_multiplier, text, font_image) {
+	ScreenEntity.call(this, game, px, py, undefined, undefined, undefined);
+	this.angle_granularity = 1;
+
+	this.font_image = font_image;
+	this.font_width = this.font_image.width / 16;
+	this.font_height = this.font_image.height / 6;
+
+	this.width_multiplier = width_multiplier;
+	this.height_multiplier = height_multiplier;
+
+	this.ufo_image = game.images.ufo;
+	this.set_text(text);
+}
+UIRasterText.prototype = Object.create(ScreenEntity.prototype);
+UIRasterText.prototype.render_text = function(text) {
+	var text_characters = text.split('');
+
+	var buffer_canvas = document.createElement('canvas');
+	buffer_canvas.width = this.font_width * text_characters.length;
+	buffer_canvas.height = this.font_height;
+
+	var buffer_context = buffer_canvas.getContext('2d');
+	
+	buffer_context.globalCompositeOperation = '#source-over';
+
+	// buffer_context.drawImage(this.ufo_image, 0, 0);
+
+	for (var i = 0; i < text_characters.length; i++) {
+		buffer_context.save();
+		buffer_context.translate(i * this.font_width, 0);
+		this.render_character(buffer_context, text_characters[i]);
+		buffer_context.restore();
+	}
+
+	return buffer_canvas;
+};
+UIRasterText.prototype.render_character = function(buffer_context, character) {
+	var character_index = character.charCodeAt(0);
+	var x = character_index % 16;
+	var y = Math.floor(character_index / 16) - 2;
+	buffer_context.drawImage(this.font_image,
+		x * this.font_width, y * this.font_height, this.font_width, this.font_height,
+		0, 0, this.font_width, this.font_height);
+};
+UIRasterText.prototype.set_text = function(text) {
+	this.text = text;
+	this.image = this.render_text(this.text);
+	this.width = this.image.width * this.width_multiplier;
+	this.height = this.image.height * this.height_multiplier;
+};
+
+
+
+
+
+
+
+
+
 
 
 
@@ -990,6 +1050,17 @@ SmallCannon.prototype.spawn_bullets = function(game, from, to) {
 function PickupBox(game, px, py, path) {
 	PathEntity.call(this, game, px, py, 32, 32, game.images.pickup_box, path);
 	this.rotation = 2;
+
+	var dice_roll = Math.floor(Math.random() * 3);
+	if (dice_roll === 0) {
+		this.carrying = 'missiles';
+	} else if (dice_roll === 1) {
+		this.carrying = 'torpedoes';
+	} else {
+		this.carrying = 'familiars';
+	}
+
+	this.add_entity(new UIRasterText(game, 0, 0, 2, 2, this.carrying[0], game.images.ui_blockface_raster_font));
 }
 PickupBox.prototype = Object.create(PathEntity.prototype);
 PickupBox.prototype.collision_radius = 20;
@@ -1095,6 +1166,8 @@ function PlayerShip(game, px, py) {
 	this.missile_fire_timer = 0;
 	this.torpedo_fire_timer = 0;
 	this.speed = 6;
+	this.special_weapon = undefined;
+	this.has_familiars = false;
 
 	this.angle_granularity = 3;
 
@@ -1109,13 +1182,6 @@ function PlayerShip(game, px, py) {
 	cross.rotation = -1;
 	cross.angle_granularity = 1;
 	this.ui_entities.push(cross);
-
-	var familiar = new PlayerFamiliarShip(game, this.px, this.py, this);
-	familiar.formation = { px: -this.width, py: this.height / 2 };
-	game.add_entity(familiar);
-	var familiar = new PlayerFamiliarShip(game, this.px, this.py, this);
-	familiar.formation = { px: this.width, py: this.height / 2 };
-	game.add_entity(familiar);
 }
 PlayerShip.prototype = Object.create(PathEntity.prototype);
 PlayerShip.prototype.collision_radius = 8;
@@ -1217,6 +1283,15 @@ PlayerShip.prototype.update = function(game) {
 };
 PlayerShip.prototype.hit_pickup = function(game, other) {
 	game.remove_entity(other);
+
+	if (other.carrying === 'missiles' || other.carrying === 'torpedoes') {
+		this.special_weapon = other.carrying;
+	} else if (other.carrying === 'familiars') {
+		if (!this.has_familiars) {
+			this.has_familiars = true;
+			this.spawn_familiars(game);
+		}
+	}
 };
 PlayerShip.prototype.hit_bullet = function(game, other) {
 	this.on_death(game);
@@ -1253,37 +1328,41 @@ PlayerShip.prototype.on_death = function(game) {
 };
 PlayerShip.prototype.fire = function(game) {
 	if (this.transformation_step >= 12) {
-		// if (this.missile_fire_timer) {
-		// 	this.missile_fire_timer--;
-		// } else {
-		// 	this.missile_fire_timer = 5;
+		if (this.special_weapon === 'missiles') {
+			if (this.missile_fire_timer) {
+				this.missile_fire_timer--;
+			} else {
+				this.missile_fire_timer = 5;
 
-		// 	var offset = point_offset(this.tilt_angle - 90 + 135, this.width / 2);
-		// 	game.add_entity(new PlayerMissile(game, this.px + offset.px, this.py + offset.py, [
-		// 		{ timeout: 60, angle: this.tilt_angle - 90 + 135, speed: 8 },
-		// 	]));
-		// 	var offset = point_offset(this.tilt_angle - 90 - 135, this.width / 2);
-		// 	game.add_entity(new PlayerMissile(game, this.px + offset.px, this.py + offset.py, [
-		// 		{ timeout: 60, angle: this.tilt_angle - 90 - 135, speed: 8 },
-		// 	]));
-		// }
-		if (this.torpedo_fire_timer) {
-			this.torpedo_fire_timer--;
-		} else {
-			this.torpedo_fire_timer = 10;
+				var offset = point_offset(this.tilt_angle - 90 + 135, this.width / 2);
+				game.add_entity(new PlayerMissile(game, this.px + offset.px, this.py + offset.py, [
+					{ timeout: 60, angle: this.tilt_angle - 90 + 135, speed: 8 },
+				]));
+				var offset = point_offset(this.tilt_angle - 90 - 135, this.width / 2);
+				game.add_entity(new PlayerMissile(game, this.px + offset.px, this.py + offset.py, [
+					{ timeout: 60, angle: this.tilt_angle - 90 - 135, speed: 8 },
+				]));
+			}
+		}
+		if (this.special_weapon === 'torpedoes') {
+			if (this.torpedo_fire_timer) {
+				this.torpedo_fire_timer--;
+			} else {
+				this.torpedo_fire_timer = 10;
 
-			var offset = point_offset(this.tilt_angle - 90 + 135, this.width / 4);
-			var offset_speed = point_offset(this.tilt_angle - 90 + 135, 2);
-			game.add_entity(new PlayerTorpedo(game, this.px + offset.px, this.py + offset.py, [
-				{ timeout: 10, angle: this.tilt_angle - 90, sx: offset_speed.px, sy: offset_speed.py, },
-				{ timeout: 60, angle: this.tilt_angle - 90, speed: 8 },
-			]));
-			var offset = point_offset(this.tilt_angle - 90 - 135, this.width / 4);
-			var offset_speed = point_offset(this.tilt_angle - 90 - 135, 2);
-			game.add_entity(new PlayerTorpedo(game, this.px + offset.px, this.py + offset.py, [
-				{ timeout: 10, angle: this.tilt_angle - 90, sx: offset_speed.px, sy: offset_speed.py, },
-				{ timeout: 60, angle: this.tilt_angle - 90, speed: 8 },
-			]));
+				var offset = point_offset(this.tilt_angle - 90 + 135, this.width / 4);
+				var offset_speed = point_offset(this.tilt_angle - 90 + 135, 2);
+				game.add_entity(new PlayerTorpedo(game, this.px + offset.px, this.py + offset.py, [
+					{ timeout: 10, angle: this.tilt_angle - 90, sx: offset_speed.px, sy: offset_speed.py, },
+					{ timeout: 60, angle: this.tilt_angle - 90, speed: 8 },
+				]));
+				var offset = point_offset(this.tilt_angle - 90 - 135, this.width / 4);
+				var offset_speed = point_offset(this.tilt_angle - 90 - 135, 2);
+				game.add_entity(new PlayerTorpedo(game, this.px + offset.px, this.py + offset.py, [
+					{ timeout: 10, angle: this.tilt_angle - 90, sx: offset_speed.px, sy: offset_speed.py, },
+					{ timeout: 60, angle: this.tilt_angle - 90, speed: 8 },
+				]));
+			}
 		}
 	} else if (this.transformation_step === 0) {
 		var offset = d2_point_offset(this.tilt_angle, -this.width / 3, -this.height / 2);
@@ -1303,6 +1382,14 @@ PlayerShip.prototype.fire = function(game) {
 	game.entities_to_add.push(new PlayerBullet(game, this.px + offset.px, this.py + offset.py, [
 		{ timeout: 40, angle: this.tilt_angle - 90, speed: 16 },
 	], game.images.red_streak_bullet));
+};
+PlayerShip.prototype.spawn_familiars = function(game) {
+	var familiar = new PlayerFamiliarShip(game, this.px, this.py, this);
+	familiar.formation = { px: -this.width, py: this.height / 2 };
+	game.add_entity(familiar);
+	var familiar = new PlayerFamiliarShip(game, this.px, this.py, this);
+	familiar.formation = { px: this.width, py: this.height / 2 };
+	game.add_entity(familiar);
 };
 
 
@@ -1355,6 +1442,7 @@ function main () {
 			pound_sign: "pound_sign.png",
 
 			ui_position_cross: "ui_position_cross.png",
+			ui_blockface_raster_font: "ui_blockface_raster_font.png",
 			pickup_box: "pickup_box.png",
 		},
 	};
@@ -1453,10 +1541,10 @@ function main () {
 		// 	{ timeout: 30, repeat: 25, sy: 1, call: [{ method: 'fire' }] },
 		// ]));
 
-		game.add_entity(new TargetSuppressionDrone(game, 500,-100, [
-			{ timeout: 120, sy: 1 },
-			{ timeout: 400, repeat: 25, sy: 0.20, call: [{ method: 'fire_at', args: [PlayerShip] }] },
-		]));
+		// game.add_entity(new TargetSuppressionDrone(game, 500,-100, [
+		// 	{ timeout: 120, sy: 1 },
+		// 	{ timeout: 400, repeat: 25, sy: 0.20, call: [{ method: 'fire_at', args: [PlayerShip] }] },
+		// ]));
 
 		game.add_entity(new UFOCarrier(game, 320,-100, [
 			{ timeout: 360, repeat: 10, sy: 0.2 },
@@ -1465,9 +1553,9 @@ function main () {
 		// game.add_entity(new HeavyUFOEnemy(game, 500, -100, [
 		// 	{ timeout: 960, sy: 1 },
 		// ]));
-		// game.add_entity(new UFOSupplyShip(game, 500, -100, [
-		// 	{ timeout: 960, angle: 120, speed: 1 },
-		// ]));
+		game.add_entity(new UFOSupplyShip(game, 500, -100, [
+			{ timeout: 960, angle: 120, speed: 1 },
+		]));
 
 		// game.add_entity(new UFOEnemy(game, 640 - 100, 100, [
 		// 	{ timeout: 120, sy: 1 },
