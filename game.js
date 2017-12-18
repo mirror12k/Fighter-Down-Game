@@ -242,6 +242,27 @@ EnemyEntity.prototype = Object.create(PathEntity.prototype);
 // 	game.entities_to_remove.push(bullet);
 // 	game.particle_systems.red_particles.add_particle(bullet.px, bullet.py, 3);
 // };
+EnemyEntity.prototype.fire_at = function(game, target, args) {
+	var self = this;
+	args = args || [];
+
+	var targets = game.query_entities(target);
+	var p = { px: this.px, py: this.py };
+	if (this.parent instanceof EnemyContainerEntity) {
+		p = this.parent.get_global_position(this);
+	}
+
+	if (targets.length) {
+		targets.sort(function (a, b) { return points_dist(self, a) - points_dist(self, b); });
+		var target = targets[0];
+
+		var full_args = args.slice();
+		full_args.unshift(target.py);
+		full_args.unshift(target.px);
+		full_args.unshift(game);
+		this.fire.apply(this, full_args);
+	}
+};
 EnemyEntity.prototype.take_damage = function(game, damage) {
 	this.health -= damage - (damage * this.armor);
 	if (this.health <= 0 && !this.dead) {
@@ -452,7 +473,7 @@ function CannonAsteroid(game, px, py, size, path) {
 		timeout: 60,
 		repeat: 100,
 		angle: cannon_angle,
-		call: [{ method: 'fire', args: [300, 300] }],
+		call: [{ method: 'fire_at', args: [PlayerShip] }],
 	}]));
 }
 CannonAsteroid.prototype = Object.create(EnemyContainerEntity.prototype);
@@ -1092,10 +1113,10 @@ function main () {
 			]));
 		}
 
-		// game.add_entity(new UFOEnemy(game, 100,100, [
-		// 	{ timeout: 120, sy: 1 },
-		// 	{ timeout: 60, repeat: 5, sy: 1, call: [{ method: 'fire', args: [300, 300] }] },
-		// ]));
+		game.add_entity(new UFOEnemy(game, 100,-100, [
+			{ timeout: 120, sy: 1 },
+			{ timeout: 120, repeat: 5, sy: 1, call: [{ method: 'fire_at', args: [PlayerShip] }] },
+		]));
 
 		// game.add_entity(new UFOEnemy(game, 640 - 100, 100, [
 		// 	{ timeout: 120, sy: 1 },
