@@ -291,8 +291,7 @@ EnemyEntity.prototype.fire_at = function(game, target, args) {
 		var target = targets[0];
 
 		var full_args = args.slice();
-		full_args.unshift(target.py);
-		full_args.unshift(target.px);
+		full_args.unshift(target);
 		full_args.unshift(game);
 		this.fire.apply(this, full_args);
 	}
@@ -354,8 +353,8 @@ function UFOEnemy(game, px, py, path) {
 UFOEnemy.prototype = Object.create(EnemyEntity.prototype);
 UFOEnemy.prototype.collision_radius = 32;
 
-UFOEnemy.prototype.fire = function(game, tx, ty) {
-	// var target_angle = point_angle(this.px, this.py, tx, ty);
+UFOEnemy.prototype.fire = function(game, target) {
+	// var target_angle = point_angle(this.px, this.py, target.px, target.py);
 	// for (var d = -120; d <= 120; d += 60) {
 	// 	var offset = point_offset(target_angle + 90, d);
 		
@@ -371,7 +370,7 @@ UFOEnemy.prototype.fire = function(game, tx, ty) {
 	// 	game.entities_to_add.push(new EnemyBullet(game, this.px, this.py, path));
 	// }
 
-	var target_angle = point_angle(this.px, this.py, tx, ty);
+	var target_angle = point_angle(this.px, this.py, target.px, target.py);
 	// console.log("angle: ", target_angle / Math.PI * 180);
 
 	// var sx = Math.cos(target_angle) * 2;
@@ -399,12 +398,12 @@ function MiniUFOEnemy(game, px, py, path) {
 MiniUFOEnemy.prototype = Object.create(EnemyEntity.prototype);
 MiniUFOEnemy.prototype.collision_radius = 16;
 
-MiniUFOEnemy.prototype.fire = function(game, tx, ty) {
+MiniUFOEnemy.prototype.fire = function(game, target) {
 	var p = { px: this.px, py: this.py };
 	if (this.parent instanceof EnemyContainerEntity)
 		p = this.parent.get_global_position(this);
 
-	var target_angle = point_angle(p.px, p.py, tx, ty);
+	var target_angle = point_angle(p.px, p.py, target.px, target.py);
 
 	game.add_entity(new EnemyBullet(game, p.px, p.py, [
 		{ timeout: 360, angle: target_angle, speed: 2 },
@@ -529,9 +528,9 @@ UFOPlatform.prototype.spawn_bullets = function(game) {
 		], game.images.purple_square_bullet));
 	}
 };
-UFOPlatform.prototype.fire = function(game, tx, ty) {
+UFOPlatform.prototype.fire = function(game, target) {
 	this.firing = 40;
-	this.fire_target = { px: tx, py: ty };
+	this.fire_target = { px: target.px, py: target.py };
 
 	this.spawn_bullets(game);
 };
@@ -587,6 +586,40 @@ PointSuppressionDrone.prototype.fire = function(game) {
 		game.add_entity(new EnemyBullet(game, this.px, this.py, [
 			{ timeout: 50, angle: this.angle + 180 + i * spread, speed: 4 },
 		], game.images.bright_purple_square_bullet));
+	}
+};
+
+function TargetSuppressionDrone(game, px, py, path) {
+	EnemyEntity.call(this, game, px, py, 40, 40, game.images.point_defense_drone, path);
+	this.health = 400;
+	this.angle = Math.random() * 360;
+	this.rotation = 0.5;
+
+	this.firing = 0;
+}
+TargetSuppressionDrone.prototype = Object.create(EnemyEntity.prototype);
+TargetSuppressionDrone.prototype.collision_radius = 16;
+TargetSuppressionDrone.prototype.update = function(game) {
+	EnemyEntity.prototype.update.call(this, game);
+	if (this.firing > 0) {
+		this.firing--;
+		this.spawn_bullets(game);
+	}
+}
+TargetSuppressionDrone.prototype.fire = function(game, target) {
+	this.firing = 200;
+	this.fire_target = target;
+};
+TargetSuppressionDrone.prototype.spawn_bullets = function(game) {
+	if (Math.random() < 0.5) {
+		var spawn_angle = Math.random() * 360;
+		var spawn_offset = point_offset(spawn_angle, this.width / 2 + Math.random() * this.width * 2);
+		var target_angle = point_angle(this.px + spawn_offset.px, this.py + spawn_offset.py, this.fire_target.px, this.fire_target.py);
+		game.add_entity(new EnemyBullet(game, this.px, this.py, [
+			{ timeout: 10, px: this.px + spawn_offset.px, py: this.py + spawn_offset.py },
+			{ timeout: 50 },
+			{ timeout: 240, angle: target_angle, speed: 2 },
+		], game.images.bright_blue_square_bullet));
 	}
 };
 
@@ -703,9 +736,9 @@ UFOStation.prototype.spawn_bullets = function(game) {
 
 	this.firing--;
 };
-UFOStation.prototype.fire = function(game, tx, ty) {
+UFOStation.prototype.fire = function(game, target) {
 	this.firing = 135;
-	this.fire_target = { px: tx, py: ty };
+	this.fire_target = { px: target.px, py: target.py };
 
 	this.spawn_bullets(game);
 };
@@ -809,13 +842,13 @@ UFOCorvetteEnemy.prototype.collision_radius = 32;
 // UFOCorvetteEnemy.prototype.update = function(game) {
 // 	EnemyContainerEntity.prototype.update.call(this, game);
 // };
-UFOCorvetteEnemy.prototype.fire = function(game, tx, ty) {
+UFOCorvetteEnemy.prototype.fire = function(game, target) {
 	for (var i = this.sub_entities.length - 1; i >= 0; i--) {
 		var ent = this.sub_entities[i];
 		var pos = this.get_global_position(ent);
 
-		ent.angle = point_angle(pos.px, pos.py, tx, ty) - this.angle;
-		this.spawn_bullets(game, pos, { px: tx, py: ty });
+		ent.angle = point_angle(pos.px, pos.py, target.px, target.py) - this.angle;
+		this.spawn_bullets(game, pos, target);
 	}
 };
 UFOCorvetteEnemy.prototype.spawn_bullets = function(game, from, to) {
@@ -881,18 +914,18 @@ function SmallCannon(game, px, py, path) {
 }
 SmallCannon.prototype = Object.create(EnemyEntity.prototype);
 SmallCannon.prototype.collision_radius = 16;
-SmallCannon.prototype.fire = function(game, tx, ty) {
+SmallCannon.prototype.fire = function(game, target) {
 	var ent = this.sub_entities[0];
 	var pos = this.parent.get_global_position(this);
 
-	var target_angle = point_angle(pos.px, pos.py, tx, ty);
+	var target_angle = point_angle(pos.px, pos.py, target.px, target.py);
 	var diff = angle_diff(this.parent.angle + this.angle, target_angle);
 	var offset = point_offset(this.parent.angle + this.angle, 20);
 	game.game_systems.debug_system.add_debug_ray(pos, { px: pos.px + offset.px, py: pos.py + offset.py });
 
 	if (Math.abs(diff) < 90) {
 		ent.angle = -diff;
-		this.spawn_bullets(game, pos, { px: tx, py: ty });
+		this.spawn_bullets(game, pos, target);
 	}
 };
 SmallCannon.prototype.spawn_bullets = function(game, from, to) {
@@ -1158,6 +1191,7 @@ function main () {
 			ufo_station_pylon2: "ufo_station_pylon2.png",
 
 			red_streak_bullet: "red_streak_bullet.png",
+			bright_blue_square_bullet: "bright_blue_square_bullet.png",
 			bright_purple_square_bullet: "bright_purple_square_bullet.png",
 			purple_square_bullet: "purple_square_bullet.png",
 			orange_round_bullet: "orange_round_bullet.png",
@@ -1269,17 +1303,17 @@ function main () {
 		// 	{ timeout: 30, repeat: 25, sy: 1, call: [{ method: 'fire' }] },
 		// ]));
 
-		// game.add_entity(new PointSuppressionDrone(game, 500,-400, [
-		// 	{ timeout: 240, sy: 1 },
-		// 	{ timeout: 30, repeat: 25, sy: 1, call: [{ method: 'fire' }] },
-		// ]));
+		game.add_entity(new TargetSuppressionDrone(game, 500,-100, [
+			{ timeout: 240, sy: 1 },
+			{ timeout: 400, repeat: 25, sy: 0.20, call: [{ method: 'fire_at', args: [PlayerShip] }] },
+		]));
 
 		// game.add_entity(new HeavyUFOEnemy(game, 500, -100, [
 		// 	{ timeout: 960, sy: 1 },
 		// ]));
-		game.add_entity(new UFOSupplyShip(game, 500, -100, [
-			{ timeout: 960, angle: 120, speed: 1 },
-		]));
+		// game.add_entity(new UFOSupplyShip(game, 500, -100, [
+		// 	{ timeout: 960, angle: 120, speed: 1 },
+		// ]));
 
 		// game.add_entity(new UFOEnemy(game, 640 - 100, 100, [
 		// 	{ timeout: 120, sy: 1 },
