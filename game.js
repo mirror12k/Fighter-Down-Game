@@ -1270,6 +1270,11 @@ PlayerFamiliarShip.prototype.fire = function(game) {
 };
 
 
+function ImmuneEntityTag(timer) {
+	this.timer = timer;
+}
+
+
 function PlayerShip(game, px, py) {
 	PathEntity.call(this, game, px, py, 64, 64, game.images.fighter_transform_animation);
 	this.max_frame = 8;
@@ -1397,6 +1402,12 @@ PlayerShip.prototype.update = function(game) {
 		}
 	}
 
+	var tag = this.get_tag(ImmuneEntityTag);
+	if (tag) {
+		this.visible = (tag.timer % 2) > 0;
+	} else {
+		this.visible = true;
+	}
 
 	// this.fire_timer--;
 	// if (this.fire_timer <= 0) {
@@ -1417,13 +1428,17 @@ PlayerShip.prototype.hit_pickup = function(game, other) {
 	}
 };
 PlayerShip.prototype.hit_bullet = function(game, other) {
-	this.on_death(game);
 	game.remove_entity(other);
-	game.remove_entity(this);
+	if (!this.get_tag(ImmuneEntityTag)) {
+		this.on_death(game);
+		game.remove_entity(this);
+	}
 };
 PlayerShip.prototype.hit_enemy = function(game, other) {
-	this.on_death(game);
-	game.remove_entity(this);
+	if (!this.get_tag(ImmuneEntityTag)) {
+		this.on_death(game);
+		game.remove_entity(this);
+	}
 };
 PlayerShip.prototype.on_death = function(game) {
 
@@ -1524,6 +1539,29 @@ PlayerShip.prototype.spawn_familiars = function(game) {
 };
 
 
+function RespawnSystem(game) {
+	ScreenEntity.call(this, game, game.canvas.width / 2, game.canvas.height / 2);
+
+	this.respawn_timer = 0;
+}
+RespawnSystem.prototype = Object.create(ScreenEntity.prototype);
+RespawnSystem.prototype.update = function(game) {
+	Entity.prototype.update.call(this, game);
+
+	var player = game.query_entities(PlayerShip)[0];
+
+	if (!player) {
+		this.respawn_timer++;
+		if (this.respawn_timer > 180) {
+			this.respawn_timer = 0;
+			player = new PlayerShip(game, 320, 480 - 80);
+			player.add_tag(new ImmuneEntityTag(90));
+			game.add_entity(player);
+		}
+	}
+};
+
+
 function main () {
 	var canvas = document.querySelector('#game_canvas');
 	var ctx = canvas.getContext('2d');
@@ -1587,14 +1625,14 @@ function main () {
 
 
 		game.game_systems.collision_system = new CircularCollisionSystem(game);
-		game.game_systems.input_manager = new InputManager(game);
-		game.game_systems.input_manager.input_handlers.push({
-			type: 'key_pressed',
-			key: 'O',
-			callback: function (game) {
-				game.game_systems.debug_system.visible = !game.game_systems.debug_system.visible;
-			},
-		});
+		// game.game_systems.input_manager = new InputManager(game);
+		// game.game_systems.input_manager.input_handlers.push({
+		// 	type: 'key_pressed',
+		// 	key: 'O',
+		// 	callback: function (game) {
+		// 		game.game_systems.debug_system.visible = !game.game_systems.debug_system.visible;
+		// 	},
+		// });
 
 		game.game_systems.ui_container = new Entity(game);
 		game.game_systems.ui_container.z_index = 100;
@@ -1628,6 +1666,7 @@ function main () {
 			},
 		});
 
+		game.game_systems.respawn_system = new RespawnSystem(game);
 		game.game_systems.spawn_system = new PathEntity(game, 0, 0, undefined, undefined, undefined, [
 			{ timeout: 60, repeat: 4, spawn_entity: [
 				{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
@@ -1918,7 +1957,7 @@ function main () {
 		// 	},
 		// });
 
-		game.add_entity(new PlayerShip(game, 320, 240));
+		game.add_entity(new PlayerShip(game, 320, 480 - 80));
 
 		// game.add_entity(new UFOStation(game, 320, 0, [
 		// 	{ timeout: 120, sy: 0.1 },
