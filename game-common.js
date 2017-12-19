@@ -1062,18 +1062,27 @@ PathEntity.prototype.trigger_path_action = function(game, action) {
 	}
 
 	if (action.spawn_entity) {
+		// console.log('debug');
 		for (var i = 0; i < action.spawn_entity.length; i++) {
 			// console.log("debug path: ", action.spawn_entity[i].path);
 			var instruction = action.spawn_entity[i];
 
 			var args = instruction.args.slice();
-			args.unshift(this.py + (instruction.py || 0));
-			args.unshift(this.px + (instruction.px || 0));
+			var py = this.py + (instruction.py || 0);
+			var px = this.px + (instruction.px || 0);
+			if (instruction.scatter) {
+				if (instruction.scatter.width)
+					px += Math.random() * instruction.scatter.width - instruction.scatter.width / 2;
+				if (instruction.scatter.height)
+					py += Math.random() * instruction.scatter.height - instruction.scatter.height / 2;
+			}
+			args.unshift(py);
+			args.unshift(px);
 			args.unshift(game);
 
 			var object = Object.create(instruction.class.prototype);
 			instruction.class.apply(object, args);
-			game.entities_to_add.push(object);
+			game.add_entity(object);
 		}
 	}
 
