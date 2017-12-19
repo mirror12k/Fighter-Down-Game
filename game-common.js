@@ -325,10 +325,15 @@ function GameSystem(canvas, assets) {
 		A: false,
 		S: false,
 		D: false,
-		' ': false,
 		shift: false,
 		ctrl: false,
 		alt: false,
+		
+		space: false,
+		left: false,
+		up: false,
+		right: false,
+		down: false,
 	};
 	this.previous_mouse1_state = false;
 	this.mouse1_state = false;
@@ -339,11 +344,22 @@ function GameSystem(canvas, assets) {
 		if (!this.keystate.ctrl)
 			e.preventDefault();
 		var charcode = String.fromCharCode(e.keyCode);
-		this.keystate[charcode] = true;
+		if (e.keyCode === 37)
+			this.keystate.left = true;
+		else if (e.keyCode === 38)
+			this.keystate.up = true;
+		else if (e.keyCode === 39)
+			this.keystate.right = true;
+		else if (e.keyCode === 40)
+			this.keystate.down = true;
+		else if (charcode === ' ')
+			this.keystate.space = true;
+		else
+			this.keystate[charcode] = true;
 		this.keystate.shift = !!e.shiftKey;
 		this.keystate.ctrl = !!e.ctrlKey;
 		this.keystate.alt = !!e.altKey;
-		// console.log('keydown: ', charcode);
+		// console.log('keydown: ', e.keyCode, charcode);
 	}).bind(this));
 
 	document.addEventListener('keyup', (function (e) {
@@ -351,7 +367,18 @@ function GameSystem(canvas, assets) {
 		if (!this.keystate.ctrl)
 			e.preventDefault();
 		var charcode = String.fromCharCode(e.keyCode);
-		this.keystate[charcode] = false;
+		if (e.keyCode === 37)
+			this.keystate.left = false;
+		else if (e.keyCode === 38)
+			this.keystate.up = false;
+		else if (e.keyCode === 39)
+			this.keystate.right = false;
+		else if (e.keyCode === 40)
+			this.keystate.down = false;
+		else if (charcode === ' ')
+			this.keystate.space = false;
+		else
+			this.keystate[charcode] = false;
 		this.keystate.shift = !!e.shiftKey;
 		this.keystate.ctrl = !!e.ctrlKey;
 		this.keystate.alt = !!e.altKey;
