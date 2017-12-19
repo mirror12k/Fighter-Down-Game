@@ -611,12 +611,34 @@ function CannonAsteroid(game, px, py, path) {
 
 	var cannon_angle = Math.random() * 360;
 	var offset = point_offset(cannon_angle, this.width / 2);
-	this.add_entity(new SmallCannon(game, offset.px, offset.py, [{
+	var ent = new SmallCannon(game, offset.px, offset.py, [{
 		timeout: 60,
 		repeat: 100,
 		angle: cannon_angle,
 		call: [{ method: 'fire_at', args: [PlayerShip] }],
-	}]));
+	}]);
+	ent.despawn_off_screen = false;
+	this.add_entity(ent);
+	
+	var offset = point_offset(cannon_angle + 120, this.width / 2);
+	var ent = new SmallCannon(game, offset.px, offset.py, [{
+		timeout: 60,
+		repeat: 100,
+		angle: cannon_angle + 120,
+		call: [{ method: 'fire_at', args: [PlayerShip] }],
+	}]);
+	ent.despawn_off_screen = false;
+	this.add_entity(ent);
+
+	var offset = point_offset(cannon_angle + 240, this.width / 2);
+	var ent = new SmallCannon(game, offset.px, offset.py, [{
+		timeout: 60,
+		repeat: 100,
+		angle: cannon_angle + 240,
+		call: [{ method: 'fire_at', args: [PlayerShip] }],
+	}]);
+	ent.despawn_off_screen = false;
+	this.add_entity(ent);
 }
 CannonAsteroid.prototype = Object.create(EnemyContainerEntity.prototype);
 CannonAsteroid.prototype.collision_radius = 32;
@@ -633,12 +655,12 @@ PointSuppressionDrone.prototype.fire = function(game) {
 	var spread = 5;
 	for (var i = 0; i <= 60 / spread; i++) {
 		game.add_entity(new EnemyBullet(game, this.px, this.py, [
-			{ timeout: 40, angle: this.angle + i * spread, speed: 4 },
+			{ timeout: 30, angle: this.angle + i * spread, speed: 4 },
 		], game.images.bright_purple_square_bullet));
 	}
 	for (var i = 0; i <= 60 / spread; i++) {
 		game.add_entity(new EnemyBullet(game, this.px, this.py, [
-			{ timeout: 40, angle: this.angle + 180 + i * spread, speed: 4 },
+			{ timeout: 30, angle: this.angle + 180 + i * spread, speed: 4 },
 		], game.images.bright_purple_square_bullet));
 	}
 };
@@ -822,20 +844,13 @@ UFOStationRing.prototype = Object.create(ScreenEntity.prototype);
 UFOStationRing.prototype.z_index = -1;
 
 
-function RotatingCrystalEntity(game, px, py) {
-	ScreenEntity.call(this, game, px, py, 16, 16, game.images.purple_crystal);
-	this.angle = 0;
-	this.rotation = 1;
-}
-RotatingCrystalEntity.prototype = Object.create(ScreenEntity.prototype);
 
 function UFOCorsairEnemy(game, px, py, path) {
 	EnemyEntity.call(this, game, px, py, 128, 64, game.images.ufo_corsair, path);
-	this.sub_entities = [ new RotatingCrystalEntity(game, this.width / 4, 0) ];
-	// this.crystal_ent = new RotatingCrystalEntity(game, this.width / 4, 0);
+	var ent = new ScreenEntity(game, this.width / 4, 0, 16, 16, game.images.purple_crystal);
+	ent.rotation = 1;
+	this.add_entity(ent);
 	this.angle = 0;
-
-	this.fire_timer = 30 * 5;
 
 	this.health = 500;
 }
@@ -883,19 +898,23 @@ function UFOCorvetteEnemy(game, px, py, path) {
 	var cannon = new EnemyEntity(game, 0, -this.height / 3, 72, 72, game.images.ufo_corvette_cannon);
 	cannon.collision_radius = 24;
 	cannon.angle_granularity = 1;
+	cannon.despawn_off_screen = false;
 	this.add_entity(cannon);
 	var cannon = new EnemyEntity(game, 0, this.height / 3, 72, 72, game.images.ufo_corvette_cannon);
 	cannon.collision_radius = 24;
 	cannon.angle_granularity = 1;
+	cannon.despawn_off_screen = false;
 	this.add_entity(cannon);
 
 	var cannon = new EnemyEntity(game, this.width / 3, -this.height / 3, 72, 72, game.images.ufo_corvette_cannon);
 	cannon.collision_radius = 24;
 	cannon.angle_granularity = 1;
+	cannon.despawn_off_screen = false;
 	this.add_entity(cannon);
 	var cannon = new EnemyEntity(game, this.width / 3, this.height / 3, 72, 72, game.images.ufo_corvette_cannon);
 	cannon.collision_radius = 24;
 	cannon.angle_granularity = 1;
+	cannon.despawn_off_screen = false;
 	this.add_entity(cannon);
 }
 UFOCorvetteEnemy.prototype = Object.create(EnemyContainerEntity.prototype);
@@ -1019,6 +1038,37 @@ UFOSupplyShip.prototype.on_death = function(game) {
 		speed: 0.5,
 	}]));
 };
+
+function UFOCarrierDefensePlate(game, px, py) {
+	EnemyEntity.call(this, game, px, py, 48, 96, game.images.ufo_carrier_armor);
+	this.health = 500;
+	this.fire_timer = Math.random() * 120;
+}
+UFOCarrierDefensePlate.prototype = Object.create(EnemyEntity.prototype);
+UFOCarrierDefensePlate.prototype.collision_radius = 24;
+UFOCarrierDefensePlate.prototype.update = function(game) {
+	EnemyEntity.prototype.update.call(this, game);
+
+	this.fire_timer++;
+	if (this.fire_timer > 120) {
+		this.fire_timer = 0;
+		this.fire(game);
+	}
+};
+UFOCarrierDefensePlate.prototype.fire = function(game) {
+	var p = this;
+	if (this.parent instanceof EnemyContainerEntity)
+		p = this.parent.get_global_position(this);
+
+	for (var i = -6; i <= 6; i++) {
+		game.add_entity(new EnemyBullet(game, p.px, p.py, [
+			{ timeout: 480, angle: p.angle + i * 2, speed: 2 },
+		], game.images.bright_purple_square_bullet));
+		
+	}
+};
+
+
 function UFOCarrier(game, px, py, path) {
 	EnemyContainerEntity.call(this, game, px, py, 128, 128, game.images.ufo_carrier_body, path);
 	this.angle = Math.random() * 360;
@@ -1031,10 +1081,9 @@ function UFOCarrier(game, px, py, path) {
 	for (var i = 0; i < 360 / 90; i++) {
 		var angle = i * 90;
 		var offset = point_offset(angle, 48);
-		var plate = new EnemyEntity(game, offset.px, offset.py, 48, 96, game.images.ufo_carrier_armor);
-		plate.health = 500;
+		var plate = new UFOCarrierDefensePlate(game, offset.px, offset.py);
 		plate.angle = angle;
-		plate.collision_radius = 24;
+		plate.despawn_off_screen = false;
 		this.add_entity(plate);
 	}
 }
@@ -1044,7 +1093,7 @@ UFOCarrier.prototype.update = function(game) {
 	EnemyContainerEntity.prototype.update.call(this, game);
 
 	this.spawn_timer++;
-	if (this.spawn_timer > 480) {
+	if (this.spawn_timer > 360) {
 		this.spawn_timer = 0;
 
 		for (var i = 0; i < 360 / 90; i++) {
@@ -1054,6 +1103,7 @@ UFOCarrier.prototype.update = function(game) {
 					call: [{ method: 'fire_at', args: [PlayerShip] }] },
 			]);
 			ent.z_index = -1;
+			ent.on_screen = true;
 			game.add_entity(ent);
 		}
 	}
@@ -1132,7 +1182,8 @@ PickupBox.prototype.collision_radius = 20;
 PickupBox.prototype.update = function(game) {
 	PathEntity.prototype.update.call(this, game);
 
-	this.current_action.sy += 0.02;
+	if (this.current_action)
+		this.current_action.sy += 0.02;
 };
 
 
@@ -1248,7 +1299,7 @@ function PlayerShip(game, px, py) {
 	cross.angle_granularity = 1;
 	this.ui_entities.push(cross);
 
-	this.spawn_familiars(game);
+	// this.spawn_familiars(game);
 }
 PlayerShip.prototype = Object.create(PathEntity.prototype);
 PlayerShip.prototype.collision_radius = 8;
@@ -1578,169 +1629,174 @@ function main () {
 		});
 
 		game.game_systems.spawn_system = new PathEntity(game, 0, 0, undefined, undefined, undefined, [
-			// { timeout: 60, repeat: 4, spawn_entity: [
-			// 	{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
-			// 			args: [[{ timeout: 1000, angle: 90 + 15, speed: 1 }]] },
-			// 	{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
-			// 			args: [[{ timeout: 1000, angle: 90 + 15, speed: 1.25 }]] },
-			// 	{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
-			// 			args: [[{ timeout: 1000, angle: 90 + 15, speed: 1.5 }]] },
-			// 	{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
-			// 			args: [[{ timeout: 1000, angle: 90 + -15, speed: 1 }]] },
-			// 	{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
-			// 			args: [[{ timeout: 1000, angle: 90 + -15, speed: 1.25 }]] },
-			// 	{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
-			// 			args: [[{ timeout: 1000, angle: 90 + -15, speed: 1.5 }]] },
-			// ]},
-			// { timeout: 60 },
-			// { timeout: 120, spawn_entity: [
-			// 	{ class: UFOEnemy, px: 150, py: -100, args: [[
-			// 			{ timeout: 120, angle: 90, speed: 1.5 },
-			// 			{ timeout: 120, repeat: 4, sy: 1, call: [{ method: 'fire_at', args: [PlayerShip] }] },
-			// 			{ timeout: 1000, angle: 90, speed: 1.5 },]] },
-			// 	{ class: UFOEnemy, px: 640 - 150, py: -100, args: [[
-			// 			{ timeout: 120, angle: 90, speed: 1.5 },
-			// 			{ timeout: 120, repeat: 4, sy: 1, call: [{ method: 'fire_at', args: [PlayerShip] }] },
-			// 			{ timeout: 1000, angle: 90, speed: 1.5 },]] },
-			// ]},
-			// { timeout: 60, repeat: 4, spawn_entity: [
-			// 	{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
-			// 			args: [[{ timeout: 1000, angle: 90 + 15, speed: 1 }]] },
-			// 	{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
-			// 			args: [[{ timeout: 1000, angle: 90 + 15, speed: 1.5 }]] },
-			// 	{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
-			// 			args: [[{ timeout: 1000, angle: 90 + -15, speed: 1 }]] },
-			// 	{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
-			// 			args: [[{ timeout: 1000, angle: 90 + -15, speed: 1.5 }]] },
-			// ]},
-			// { timeout: 120, spawn_entity: [
-			// 	{ class: UFOEnemy, px: 150, py: -100, args: [[
-			// 			{ timeout: 120, angle: 90, speed: 1.5 },
-			// 			{ timeout: 120, repeat: 4, sy: 1, call: [{ method: 'fire_at', args: [PlayerShip] }] },
-			// 			{ timeout: 1000, angle: 90, speed: 1.5 },]] },
-			// 	{ class: UFOEnemy, px: 640 - 150, py: -100, args: [[
-			// 			{ timeout: 120, angle: 90, speed: 1.5 },
-			// 			{ timeout: 120, repeat: 4, sy: 1, call: [{ method: 'fire_at', args: [PlayerShip] }] },
-			// 			{ timeout: 1000, angle: 90, speed: 1.5 },]] },
-			// ]},
-			// { timeout: 60, repeat: 4, spawn_entity: [
-			// 	{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
-			// 			args: [[{ timeout: 1000, angle: 90 + 15, speed: 1 }]] },
-			// 	{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
-			// 			args: [[{ timeout: 1000, angle: 90 + 15, speed: 1.5 }]] },
-			// 	{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
-			// 			args: [[{ timeout: 1000, angle: 90 + -15, speed: 1 }]] },
-			// 	{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
-			// 			args: [[{ timeout: 1000, angle: 90 + -15, speed: 1.5 }]] },
-			// ]},
-			// { timeout: 60 },
-			// { timeout: 120, spawn_entity: [
-			// 	{ class: PointSuppressionDrone, px: 120, py: -100, args: [[
-			// 			{ timeout: 40, repeat: 20, sy: 1, call: [{ method: 'fire' }] },]] },
-			// 	{ class: PointSuppressionDrone, px: 640 - 120, py: -200, args: [[
-			// 			{ timeout: 40, repeat: 20, sy: 1, call: [{ method: 'fire' }] },]] },
-			// 	{ class: PointSuppressionDrone, px: 320, py: -400, args: [[
-			// 			{ timeout: 40, repeat: 20, sy: 1, call: [{ method: 'fire' }] },]] },
-			// ]},
-			// { timeout: 60, repeat: 4, spawn_entity: [
-			// 	{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
-			// 			args: [[{ timeout: 1000, angle: 90 + 15, speed: 1 }]] },
-			// 	{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
-			// 			args: [[{ timeout: 1000, angle: 90 + 15, speed: 1.5 }]] },
-			// 	{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
-			// 			args: [[{ timeout: 1000, angle: 90 + -15, speed: 1 }]] },
-			// 	{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
-			// 			args: [[{ timeout: 1000, angle: 90 + -15, speed: 1.5 }]] },
-			// ]},
+			{ timeout: 60, repeat: 4, spawn_entity: [
+				{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
+						args: [[{ timeout: 1000, angle: 90 + 15, speed: 1 }]] },
+				{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
+						args: [[{ timeout: 1000, angle: 90 + 15, speed: 1.25 }]] },
+				{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
+						args: [[{ timeout: 1000, angle: 90 + 15, speed: 1.5 }]] },
+				{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
+						args: [[{ timeout: 1000, angle: 90 + -15, speed: 1 }]] },
+				{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
+						args: [[{ timeout: 1000, angle: 90 + -15, speed: 1.25 }]] },
+				{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
+						args: [[{ timeout: 1000, angle: 90 + -15, speed: 1.5 }]] },
+			]},
+			{ timeout: 60 },
+			{ timeout: 120, spawn_entity: [
+				{ class: UFOEnemy, px: 150, py: -100, args: [[
+						{ timeout: 120, angle: 90, speed: 1.5 },
+						{ timeout: 120, repeat: 4, sy: 1, call: [{ method: 'fire_at', args: [PlayerShip] }] },
+						{ timeout: 1000, angle: 90, speed: 1.5 },]] },
+				{ class: UFOEnemy, px: 640 - 150, py: -100, args: [[
+						{ timeout: 120, angle: 90, speed: 1.5 },
+						{ timeout: 120, repeat: 4, sy: 1, call: [{ method: 'fire_at', args: [PlayerShip] }] },
+						{ timeout: 1000, angle: 90, speed: 1.5 },]] },
+			]},
+			{ timeout: 60, repeat: 4, spawn_entity: [
+				{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
+						args: [[{ timeout: 1000, angle: 90 + 15, speed: 1 }]] },
+				{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
+						args: [[{ timeout: 1000, angle: 90 + 15, speed: 1.5 }]] },
+				{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
+						args: [[{ timeout: 1000, angle: 90 + -15, speed: 1 }]] },
+				{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
+						args: [[{ timeout: 1000, angle: 90 + -15, speed: 1.5 }]] },
+			]},
+			{ timeout: 120, spawn_entity: [
+				{ class: UFOEnemy, px: 150, py: -100, args: [[
+						{ timeout: 120, angle: 90, speed: 1.5 },
+						{ timeout: 120, repeat: 4, sy: 1, call: [{ method: 'fire_at', args: [PlayerShip] }] },
+						{ timeout: 1000, angle: 90, speed: 1.5 },]] },
+				{ class: UFOEnemy, px: 640 - 150, py: -100, args: [[
+						{ timeout: 120, angle: 90, speed: 1.5 },
+						{ timeout: 120, repeat: 4, sy: 1, call: [{ method: 'fire_at', args: [PlayerShip] }] },
+						{ timeout: 1000, angle: 90, speed: 1.5 },]] },
+			]},
+			{ timeout: 60, repeat: 4, spawn_entity: [
+				{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
+						args: [[{ timeout: 1000, angle: 90 + 15, speed: 1 }]] },
+				{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
+						args: [[{ timeout: 1000, angle: 90 + 15, speed: 1.5 }]] },
+				{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
+						args: [[{ timeout: 1000, angle: 90 + -15, speed: 1 }]] },
+				{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
+						args: [[{ timeout: 1000, angle: 90 + -15, speed: 1.5 }]] },
+			]},
+			{ timeout: 60 },
+			{ timeout: 120, spawn_entity: [
+				{ class: PointSuppressionDrone, px: 120, py: -100, args: [[
+						{ timeout: 40, repeat: 20, sy: 1, call: [{ method: 'fire' }] },]] },
+				{ class: PointSuppressionDrone, px: 640 - 120, py: -200, args: [[
+						{ timeout: 40, repeat: 20, sy: 1, call: [{ method: 'fire' }] },]] },
+				{ class: PointSuppressionDrone, px: 320, py: -400, args: [[
+						{ timeout: 40, repeat: 20, sy: 1, call: [{ method: 'fire' }] },]] },
+			]},
+			{ timeout: 60, repeat: 4, spawn_entity: [
+				{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
+						args: [[{ timeout: 1000, angle: 90 + 15, speed: 1 }]] },
+				{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
+						args: [[{ timeout: 1000, angle: 90 + 15, speed: 1.5 }]] },
+				{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
+						args: [[{ timeout: 1000, angle: 90 + -15, speed: 1 }]] },
+				{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
+						args: [[{ timeout: 1000, angle: 90 + -15, speed: 1.5 }]] },
+			]},
 
 
 
-			// { timeout: 120 },
-			// { timeout: 120, repeat: 4, spawn_entity: [
-			// 	{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
-			// 			args: [[{ timeout: 1000, angle: 90 + 15, speed: 1 }]] },
-			// 	{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
-			// 			args: [[{ timeout: 1000, angle: 90 + 15, speed: 1.5 }]] },
-			// 	{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
-			// 			args: [[{ timeout: 1000, angle: 90 + -15, speed: 1 }]] },
-			// 	{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
-			// 			args: [[{ timeout: 1000, angle: 90 + -15, speed: 1.5 }]] },
-			// 	{ class: CannonAsteroid, px: 320, py: -100, scatter: { width: 640 }, args: [[
-			// 			{ timeout: 1000, angle: 90 + 15, speed: 1.5 },]] },
-			// 	{ class: CannonAsteroid, px: 320, py: -100, scatter: { width: 640 }, args: [[
-			// 			{ timeout: 1000, angle: 90 + -15, speed: 1.5 },]] },
-			// ]},
-			// { timeout: 240 },
-			// { timeout: 120, spawn_entity: [
-			// 	{ class: UFOSupplyShip, px: 640 + 50, py: 100, args: [[
-			// 			{ timeout: 2000, angle: 90 + 15 + 45, speed: 1.2 },]] },
-			// ]},
-			// { timeout: 360 },
-			// { timeout: 120, spawn_entity: [
-			// 	{ class: MiniUFOEnemy, px: 50, py: -100, args: [[
-			// 			{ timeout: 60, angle: 90, speed: 2 },
-			// 			{ timeout: 30, repeat: 4, angle: 90, speed: 1.5, call: [{ method: 'fire_at', args: [PlayerShip] }] },
-			// 			{ timeout: 1000, angle: 90, speed: 2 },]] },
-			// 	{ class: MiniUFOEnemy, px: 150, py: -150, args: [[
-			// 			{ timeout: 60, angle: 90, speed: 2 },
-			// 			{ timeout: 30, repeat: 4, angle: 90, speed: 1.5, call: [{ method: 'fire_at', args: [PlayerShip] }] },
-			// 			{ timeout: 1000, angle: 90, speed: 2 },]] },
-			// 	{ class: MiniUFOEnemy, px: 250, py: -200, args: [[
-			// 			{ timeout: 60, angle: 90, speed: 2 },
-			// 			{ timeout: 30, repeat: 4, angle: 90, speed: 1.5, call: [{ method: 'fire_at', args: [PlayerShip] }] },
-			// 			{ timeout: 1000, angle: 90, speed: 2 },]] },
-			// 	{ class: MiniUFOEnemy, px: 640 - 50, py: -100, args: [[
-			// 			{ timeout: 60, angle: 90, speed: 2 },
-			// 			{ timeout: 30, repeat: 4, angle: 90, speed: 1.5, call: [{ method: 'fire_at', args: [PlayerShip] }] },
-			// 			{ timeout: 1000, angle: 90, speed: 2 },]] },
-			// 	{ class: MiniUFOEnemy, px: 640 - 150, py: -150, args: [[
-			// 			{ timeout: 60, angle: 90, speed: 2 },
-			// 			{ timeout: 30, repeat: 4, angle: 90, speed: 1.5, call: [{ method: 'fire_at', args: [PlayerShip] }] },
-			// 			{ timeout: 1000, angle: 90, speed: 2 },]] },
-			// 	{ class: MiniUFOEnemy, px: 640 - 250, py: -200, args: [[
-			// 			{ timeout: 60, angle: 90, speed: 2 },
-			// 			{ timeout: 30, repeat: 4, angle: 90, speed: 1.5, call: [{ method: 'fire_at', args: [PlayerShip] }] },
-			// 			{ timeout: 1000, angle: 90, speed: 2 },]] },
-			// ]},
-			// { timeout: 120, spawn_entity: [
-			// 	{ class: UFOEnemy, px: 200, py: -100, args: [[
-			// 			{ timeout: 100, angle: 90, speed: 1.5 },
-			// 			{ timeout: 120, repeat: 3, angle: 90, speed: 1.5, call: [{ method: 'fire_at', args: [PlayerShip] }] },
-			// 			{ timeout: 1000, angle: 90, speed: 1.5 },]] },
-			// 	{ class: UFOEnemy, px: 200, py: -180, args: [[
-			// 			{ timeout: 140, angle: 90, speed: 1.5 },
-			// 			{ timeout: 120, repeat: 3, angle: 90, speed: 1.5, call: [{ method: 'fire_at', args: [PlayerShip] }] },
-			// 			{ timeout: 1000, angle: 90, speed: 1.5 },]] },
-			// 	{ class: UFOEnemy, px: 200, py: -260, args: [[
-			// 			{ timeout: 180, angle: 90, speed: 1.5 },
-			// 			{ timeout: 120, repeat: 3, angle: 90, speed: 1.5, call: [{ method: 'fire_at', args: [PlayerShip] }] },
-			// 			{ timeout: 1000, angle: 90, speed: 1.5 },]] },
-			// ]},
-			// { timeout: 240 },
-			// { timeout: 120, spawn_entity: [
-			// 	{ class: UFOEnemy, px: 640 - 200, py: -100, args: [[
-			// 			{ timeout: 100, angle: 90, speed: 1.5 },
-			// 			{ timeout: 120, repeat: 3, angle: 90, speed: 1.5, call: [{ method: 'fire_at', args: [PlayerShip] }] },
-			// 			{ timeout: 1000, angle: 90, speed: 1.5 },]] },
-			// 	{ class: UFOEnemy, px: 640 - 200, py: -180, args: [[
-			// 			{ timeout: 140, angle: 90, speed: 1.5 },
-			// 			{ timeout: 120, repeat: 3, angle: 90, speed: 1.5, call: [{ method: 'fire_at', args: [PlayerShip] }] },
-			// 			{ timeout: 1000, angle: 90, speed: 1.5 },]] },
-			// 	{ class: UFOEnemy, px: 640 - 200, py: -260, args: [[
-			// 			{ timeout: 180, angle: 90, speed: 1.5 },
-			// 			{ timeout: 120, repeat: 3, angle: 90, speed: 1.5, call: [{ method: 'fire_at', args: [PlayerShip] }] },
-			// 			{ timeout: 1000, angle: 90, speed: 1.5 },]] },
-			// ]},
-			// { timeout: 240 },
-			// { timeout: 120, spawn_entity: [
-			// 	{ class: HeavyUFOEnemy, px: 320, py: -80, args: [[
-			// 			{ timeout: 2000, angle: 90, speed: 0.8 },]] },
-			// 	{ class: HeavyUFOEnemy, px: 320 + 100, py: -100, args: [[
-			// 			{ timeout: 2000, angle: 90 + -15, speed: 0.8 },]] },
-			// 	{ class: HeavyUFOEnemy, px: 320 - 100, py: -140, args: [[
-			// 			{ timeout: 2000, angle: 90 + 15, speed: 0.8 },]] },
-			// ]},
-			// { timeout: 360 },
+			{ timeout: 240 },
+			{ timeout: 120, spawn_entity: [
+				{ class: UFOSupplyShip, px: 640 + 50, py: 50, args: [[
+						{ timeout: 2000, angle: 90 + 30 + 45, speed: 1.2 },]] },
+			]},
+			{ timeout: 120 },
+			{ timeout: 120, repeat: 4, spawn_entity: [
+				{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
+						args: [[{ timeout: 1000, angle: 90 + 15, speed: 1 }]] },
+				{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
+						args: [[{ timeout: 1000, angle: 90 + 15, speed: 1.5 }]] },
+				{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
+						args: [[{ timeout: 1000, angle: 90 + -15, speed: 1 }]] },
+				{ class: Asteroid, px: 320, py: -100, scatter: { width: 640 },
+						args: [[{ timeout: 1000, angle: 90 + -15, speed: 1.5 }]] },
+				{ class: CannonAsteroid, px: 320, py: -100, scatter: { width: 640 }, args: [[
+						{ timeout: 1000, angle: 90 + 15, speed: 1.5 },]] },
+				{ class: CannonAsteroid, px: 320, py: -100, scatter: { width: 640 }, args: [[
+						{ timeout: 1000, angle: 90 + -15, speed: 1.5 },]] },
+			]},
+			{ timeout: 240 },
+			{ timeout: 360 },
+			{ timeout: 120, spawn_entity: [
+				{ class: MiniUFOEnemy, px: 50, py: -100, args: [[
+						{ timeout: 60, angle: 90, speed: 2 },
+						{ timeout: 30, repeat: 4, angle: 90, speed: 1.5, call: [{ method: 'fire_at', args: [PlayerShip] }] },
+						{ timeout: 1000, angle: 90, speed: 2 },]] },
+				{ class: MiniUFOEnemy, px: 150, py: -150, args: [[
+						{ timeout: 60, angle: 90, speed: 2 },
+						{ timeout: 30, repeat: 4, angle: 90, speed: 1.5, call: [{ method: 'fire_at', args: [PlayerShip] }] },
+						{ timeout: 1000, angle: 90, speed: 2 },]] },
+				{ class: MiniUFOEnemy, px: 250, py: -200, args: [[
+						{ timeout: 60, angle: 90, speed: 2 },
+						{ timeout: 30, repeat: 4, angle: 90, speed: 1.5, call: [{ method: 'fire_at', args: [PlayerShip] }] },
+						{ timeout: 1000, angle: 90, speed: 2 },]] },
+				{ class: MiniUFOEnemy, px: 640 - 50, py: -100, args: [[
+						{ timeout: 60, angle: 90, speed: 2 },
+						{ timeout: 30, repeat: 4, angle: 90, speed: 1.5, call: [{ method: 'fire_at', args: [PlayerShip] }] },
+						{ timeout: 1000, angle: 90, speed: 2 },]] },
+				{ class: MiniUFOEnemy, px: 640 - 150, py: -150, args: [[
+						{ timeout: 60, angle: 90, speed: 2 },
+						{ timeout: 30, repeat: 4, angle: 90, speed: 1.5, call: [{ method: 'fire_at', args: [PlayerShip] }] },
+						{ timeout: 1000, angle: 90, speed: 2 },]] },
+				{ class: MiniUFOEnemy, px: 640 - 250, py: -200, args: [[
+						{ timeout: 60, angle: 90, speed: 2 },
+						{ timeout: 30, repeat: 4, angle: 90, speed: 1.5, call: [{ method: 'fire_at', args: [PlayerShip] }] },
+						{ timeout: 1000, angle: 90, speed: 2 },]] },
+			]},
+			{ timeout: 120, spawn_entity: [
+				{ class: UFOEnemy, px: 200, py: -100, args: [[
+						{ timeout: 100, angle: 90, speed: 1.5 },
+						{ timeout: 120, repeat: 3, angle: 90, speed: 1.5, call: [{ method: 'fire_at', args: [PlayerShip] }] },
+						{ timeout: 1000, angle: 90, speed: 1.5 },]] },
+				{ class: UFOEnemy, px: 200, py: -180, args: [[
+						{ timeout: 140, angle: 90, speed: 1.5 },
+						{ timeout: 120, repeat: 3, angle: 90, speed: 1.5, call: [{ method: 'fire_at', args: [PlayerShip] }] },
+						{ timeout: 1000, angle: 90, speed: 1.5 },]] },
+				{ class: UFOEnemy, px: 200, py: -260, args: [[
+						{ timeout: 180, angle: 90, speed: 1.5 },
+						{ timeout: 120, repeat: 3, angle: 90, speed: 1.5, call: [{ method: 'fire_at', args: [PlayerShip] }] },
+						{ timeout: 1000, angle: 90, speed: 1.5 },]] },
+			]},
+			{ timeout: 240 },
+			{ timeout: 120, spawn_entity: [
+				{ class: UFOEnemy, px: 640 - 200, py: -100, args: [[
+						{ timeout: 100, angle: 90, speed: 1.5 },
+						{ timeout: 120, repeat: 3, angle: 90, speed: 1.5, call: [{ method: 'fire_at', args: [PlayerShip] }] },
+						{ timeout: 1000, angle: 90, speed: 1.5 },]] },
+				{ class: UFOEnemy, px: 640 - 200, py: -180, args: [[
+						{ timeout: 140, angle: 90, speed: 1.5 },
+						{ timeout: 120, repeat: 3, angle: 90, speed: 1.5, call: [{ method: 'fire_at', args: [PlayerShip] }] },
+						{ timeout: 1000, angle: 90, speed: 1.5 },]] },
+				{ class: UFOEnemy, px: 640 - 200, py: -260, args: [[
+						{ timeout: 180, angle: 90, speed: 1.5 },
+						{ timeout: 120, repeat: 3, angle: 90, speed: 1.5, call: [{ method: 'fire_at', args: [PlayerShip] }] },
+						{ timeout: 1000, angle: 90, speed: 1.5 },]] },
+			]},
+			{ timeout: 240, spawn_entity: [
+				{ class: UFOSupplyShip, px: -50, py: 100, args: [[
+						{ timeout: 2000, angle: 90 - 15 - 45, speed: 1.2 },]] },
+			]},
+			{ timeout: 360 },
+			{ timeout: 120, spawn_entity: [
+				{ class: HeavyUFOEnemy, px: 320, py: -80, args: [[
+						{ timeout: 2000, angle: 90, speed: 0.8 },]] },
+				{ class: HeavyUFOEnemy, px: 320 + 100, py: -100, args: [[
+						{ timeout: 2000, angle: 90 + -15, speed: 0.8 },]] },
+				{ class: HeavyUFOEnemy, px: 320 - 100, py: -140, args: [[
+						{ timeout: 2000, angle: 90 + 15, speed: 0.8 },]] },
+			]},
+			{ timeout: 360 },
 			{ timeout: 120, spawn_entity: [
 				{ class: UFOMineLayer, px: -100, py: 50, args: [[
 						{ timeout: 1000, angle: 15, speed: 1.5 },]] },
@@ -1809,6 +1865,49 @@ function main () {
 						{ timeout: 100, sx: -1, },
 						{ timeout: 60, call: [{ method: 'fire_at', args: [PlayerShip] }] },
 						{ timeout: 1000, sx: -1, sy: 1, },]] },
+			]},
+			{ timeout: 240 },
+			{ timeout: 240, spawn_entity: [
+				{ class: UFOSupplyShip, px: -50, py: 100, args: [[
+						{ timeout: 2000, angle: 90 - 15 - 45, speed: 1.2 },]] },
+			]},
+			{ timeout: 480 },
+			{ timeout: 120, spawn_entity: [
+				{ class: UFOCorsairEnemy, px: 150, py: -80, args: [[
+						{ timeout: 100, angle: 90, sy: 1, },
+						{ timeout: 240, repeat: 3, sy: 0.25, call: [{ method: 'fire' }] },
+						{ timeout: 1000, sy: 1.5 },]] },
+				{ class: UFOCorsairEnemy, px: 640 - 150, py: -80, args: [[
+						{ timeout: 100, angle: 90, sy: 1, },
+						{ timeout: 240, repeat: 3, sy: 0.25, call: [{ method: 'fire' }] },
+						{ timeout: 1000, sy: 1.5 },]] },
+				{ class: UFOCorsairEnemy, px: 250, py: -160, args: [[
+						{ timeout: 240, angle: 90, sy: 1, },
+						{ timeout: 240, repeat: 3, sy: 0.25, call: [{ method: 'fire' }] },
+						{ timeout: 1000, sy: 1.5 },]] },
+				{ class: UFOCorsairEnemy, px: 640 - 250, py: -160, args: [[
+						{ timeout: 240, angle: 90, sy: 1, },
+						{ timeout: 240, repeat: 3, sy: 0.25, call: [{ method: 'fire' }] },
+						{ timeout: 1000, sy: 1.5 },]] },
+				{ class: UFOCorvetteEnemy, px: 320, py: -200, args: [[
+						{ timeout: 360, angle: 90, sy: 0.75, },
+						{ timeout: 240, repeat: 3, call: [{ method: 'fire_at', args: [PlayerShip] }] },
+						{ timeout: 1000, sy: -1, },]] },
+			]},
+			{ timeout: 720 },
+			{ timeout: 120, spawn_entity: [
+				{ class: UFOStation, px: 150, py: -80, args: [[
+						{ timeout: 100, sy: 1, },
+						{ timeout: 240, repeat: 3, call: [{ method: 'fire_at', args: [PlayerShip] }] },
+						{ timeout: 1000, sx: 2, },]] },
+				{ class: UFOStation, px: 640 - 100, py: -80, args: [[
+						{ timeout: 100, sy: 1, },
+						{ timeout: 240, repeat: 3, call: [{ method: 'fire_at', args: [PlayerShip] }] },
+						{ timeout: 1000, sx: -2, },]] },
+				{ class: UFOCarrier, px: 320, py: -160, args: [[
+						{ timeout: 1000, sy: 0.3, },
+						{ timeout: 960, },
+						{ timeout: 1000, sy: 2, },]] },
 			]},
 		]);
 
